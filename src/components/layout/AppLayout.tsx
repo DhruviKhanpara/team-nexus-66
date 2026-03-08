@@ -36,7 +36,7 @@ const AppLayout = () => {
 
       {/* Nav Rail — always visible on desktop */}
       <div className={`
-        fixed z-40 h-full md:relative md:z-auto
+        fixed z-40 h-full md:relative md:z-50
         transition-transform duration-200
         ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
