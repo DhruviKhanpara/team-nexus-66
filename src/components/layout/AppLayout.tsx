@@ -48,8 +48,7 @@ const AppLayout = () => {
         <div className={`
           fixed z-40 h-full md:relative md:z-auto
           transition-transform duration-200
-          ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-          ${isMobileSidebarOpen ? 'left-[68px]' : ''}
+          ${isMobileSidebarOpen ? 'translate-x-0 left-[68px] md:left-auto' : '-translate-x-full md:translate-x-0'}
         `}>
           <SidePanel />
         </div>
