@@ -42,6 +42,7 @@ const NotificationList = () => {
         return (
           <div
             key={notif._id}
+            onClick={() => handleClick(notif)}
             className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-accent/50 ${
               !notif.isRead ? 'bg-accent/30' : ''
             }`}
