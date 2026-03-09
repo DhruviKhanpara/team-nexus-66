@@ -2,7 +2,9 @@ import { notifications, userMap } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { AtSign, MessageSquare, SmilePlus, Mail, Users, Bell } from 'lucide-react';
-import type { NotificationType } from '@/types';
+import type { NotificationType, Notification } from '@/types';
+import { useAppDispatch } from '@/app/store';
+import { setActiveChatContext, setActiveNav } from '@/features/uiSlice';
 
 const iconMap: Record<NotificationType, typeof AtSign> = {
   mention: AtSign,
