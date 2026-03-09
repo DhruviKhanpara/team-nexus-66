@@ -2,7 +2,9 @@ import { notifications, userMap } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { AtSign, MessageSquare, SmilePlus, Mail, Users, Bell } from 'lucide-react';
-import type { NotificationType } from '@/types';
+import type { NotificationType, Notification } from '@/types';
+import { useAppDispatch } from '@/app/store';
+import { setActiveChatContext, setActiveNav } from '@/features/uiSlice';
 
 const iconMap: Record<NotificationType, typeof AtSign> = {
   mention: AtSign,
@@ -16,9 +18,20 @@ const iconMap: Record<NotificationType, typeof AtSign> = {
 };
 
 const NotificationList = () => {
+  const dispatch = useAppDispatch();
   const sorted = [...notifications].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+
+  const handleClick = (notif: Notification) => {
+    if (notif.channelId) {
+      dispatch(setActiveChatContext({ type: 'channel', id: notif.channelId }));
+      dispatch(setActiveNav('teams'));
+    } else if (notif.conversationId) {
+      dispatch(setActiveChatContext({ type: 'conversation', id: notif.conversationId }));
+      dispatch(setActiveNav('chat'));
+    }
+  };
 
   return (
     <div className="space-y-0.5">
@@ -29,6 +42,7 @@ const NotificationList = () => {
         return (
           <div
             key={notif._id}
+            onClick={() => handleClick(notif)}
             className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-accent/50 ${
               !notif.isRead ? 'bg-accent/30' : ''
             }`}
