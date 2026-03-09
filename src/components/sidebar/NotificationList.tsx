@@ -18,9 +18,20 @@ const iconMap: Record<NotificationType, typeof AtSign> = {
 };
 
 const NotificationList = () => {
+  const dispatch = useAppDispatch();
   const sorted = [...notifications].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+
+  const handleClick = (notif: Notification) => {
+    if (notif.channelId) {
+      dispatch(setActiveChatContext({ type: 'channel', id: notif.channelId }));
+      dispatch(setActiveNav('teams'));
+    } else if (notif.conversationId) {
+      dispatch(setActiveChatContext({ type: 'conversation', id: notif.conversationId }));
+      dispatch(setActiveNav('chat'));
+    }
+  };
 
   return (
     <div className="space-y-0.5">
