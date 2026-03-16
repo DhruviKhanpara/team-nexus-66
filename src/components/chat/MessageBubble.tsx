@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/store';
 import { toggleReaction, softDeleteMessage } from '@/features/chatSlice';
 import { setActiveThread } from '@/features/uiSlice';
-import { userMap, currentUser } from '@/data/mockData';
+import { userMap } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MessageSquare, SmilePlus, MoreHorizontal, Pencil, Trash2, Pin } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Message } from '@/types';
+import { QUICK_EMOJIS } from '@/lib/constants';
+import { getInitials } from '@/lib/helpers';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,22 +16,40 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const QUICK_EMOJIS = ['👍', '❤️', '😂', '🎉', '🚀', '👀'];
-
-interface Props {
+interface MessageBubbleProps {
   message: Message;
   showAvatar: boolean;
   isThread?: boolean;
 }
 
-const MessageBubble = ({ message, showAvatar, isThread }: Props) => {
+const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProps) => {
   const { activeChatContext } = useAppSelector(s => s.ui);
+  const currentUser = useAppSelector(s => s.auth.user);
   const dispatch = useAppDispatch();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const sender = userMap[message.senderId];
-  const isOwn = message.senderId === currentUser._id;
+  const isOwn = message.senderId === currentUser?._id;
   const contextId = activeChatContext?.id || '';
+
+  const handleReaction = useCallback((emoji: string) => {
+    if (!currentUser) return;
+    dispatch(toggleReaction({ contextId, messageId: message._id, emoji, userId: currentUser._id }));
+    setShowEmojiPicker(false);
+  }, [contextId, message._id, currentUser, dispatch]);
+
+  const handleDelete = useCallback(() => {
+    if (!currentUser) return;
+    dispatch(softDeleteMessage({ contextId, messageId: message._id, userId: currentUser._id }));
+  }, [contextId, message._id, currentUser, dispatch]);
+
+  const handleOpenThread = useCallback(() => {
+    dispatch(setActiveThread(message._id));
+  }, [message._id, dispatch]);
+
+  const toggleEmojiPicker = useCallback(() => {
+    setShowEmojiPicker(prev => !prev);
+  }, []);
 
   if (message.deletedAt) {
     return (
@@ -39,19 +59,6 @@ const MessageBubble = ({ message, showAvatar, isThread }: Props) => {
     );
   }
 
-  const handleReaction = (emoji: string) => {
-    dispatch(toggleReaction({ contextId, messageId: message._id, emoji, userId: currentUser._id }));
-    setShowEmojiPicker(false);
-  };
-
-  const handleDelete = () => {
-    dispatch(softDeleteMessage({ contextId, messageId: message._id, userId: currentUser._id }));
-  };
-
-  const handleOpenThread = () => {
-    dispatch(setActiveThread(message._id));
-  };
-
   return (
     <div className={`chat-message-hover group rounded-md px-2 py-0.5 ${showAvatar ? 'mt-3' : ''}`}>
       <div className="flex gap-3">
@@ -60,7 +67,7 @@ const MessageBubble = ({ message, showAvatar, isThread }: Props) => {
           {showAvatar && (
             <Avatar className="w-8 h-8">
               <AvatarFallback className="text-xs font-semibold bg-secondary text-secondary-foreground">
-                {sender?.name?.split(' ').map(n => n[0]).join('') || '?'}
+                {getInitials(sender?.name)}
               </AvatarFallback>
             </Avatar>
           )}
@@ -94,7 +101,7 @@ const MessageBubble = ({ message, showAvatar, isThread }: Props) => {
                   key={reaction.emoji}
                   onClick={() => handleReaction(reaction.emoji)}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors ${
-                    reaction.users.includes(currentUser._id)
+                    currentUser && reaction.users.includes(currentUser._id)
                       ? 'bg-primary/10 border-primary/30 text-primary'
                       : 'bg-muted border-border text-muted-foreground hover:bg-accent'
                   }`}
@@ -120,10 +127,9 @@ const MessageBubble = ({ message, showAvatar, isThread }: Props) => {
 
         {/* Hover actions */}
         <div className="message-actions flex items-start gap-0.5 pt-0.5">
-          {/* Emoji react */}
           <div className="relative">
             <button
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              onClick={toggleEmojiPicker}
               className="p-1 rounded hover:bg-accent transition-colors"
             >
               <SmilePlus className="w-4 h-4 text-muted-foreground" />
@@ -143,7 +149,6 @@ const MessageBubble = ({ message, showAvatar, isThread }: Props) => {
             )}
           </div>
 
-          {/* Thread reply */}
           {!isThread && (
             <button
               onClick={handleOpenThread}
@@ -153,7 +158,6 @@ const MessageBubble = ({ message, showAvatar, isThread }: Props) => {
             </button>
           )}
 
-          {/* More menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-1 rounded hover:bg-accent transition-colors">
@@ -180,6 +184,8 @@ const MessageBubble = ({ message, showAvatar, isThread }: Props) => {
       </div>
     </div>
   );
-};
+});
+
+MessageBubble.displayName = 'MessageBubble';
 
 export default MessageBubble;
