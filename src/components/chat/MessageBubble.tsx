@@ -32,14 +32,6 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
   const isOwn = message.senderId === currentUser?._id;
   const contextId = activeChatContext?.id || '';
 
-  if (message.deletedAt) {
-    return (
-      <div className={`py-1 ${showAvatar ? 'mt-3' : ''}`}>
-        <p className="text-xs text-muted-foreground italic pl-12">This message was deleted.</p>
-      </div>
-    );
-  }
-
   const handleReaction = useCallback((emoji: string) => {
     if (!currentUser) return;
     dispatch(toggleReaction({ contextId, messageId: message._id, emoji, userId: currentUser._id }));
@@ -58,6 +50,14 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
   const toggleEmojiPicker = useCallback(() => {
     setShowEmojiPicker(prev => !prev);
   }, []);
+
+  if (message.deletedAt) {
+    return (
+      <div className={`py-1 ${showAvatar ? 'mt-3' : ''}`}>
+        <p className="text-xs text-muted-foreground italic pl-12">This message was deleted.</p>
+      </div>
+    );
+  }
 
   return (
     <div className={`chat-message-hover group rounded-md px-2 py-0.5 ${showAvatar ? 'mt-3' : ''}`}>
@@ -127,7 +127,6 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
 
         {/* Hover actions */}
         <div className="message-actions flex items-start gap-0.5 pt-0.5">
-          {/* Emoji react */}
           <div className="relative">
             <button
               onClick={toggleEmojiPicker}
@@ -150,7 +149,6 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
             )}
           </div>
 
-          {/* Thread reply */}
           {!isThread && (
             <button
               onClick={handleOpenThread}
@@ -160,7 +158,6 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
             </button>
           )}
 
-          {/* More menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-1 rounded hover:bg-accent transition-colors">
