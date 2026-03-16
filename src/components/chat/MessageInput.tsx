@@ -1,75 +1,49 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/store';
 import { addMessage } from '@/features/chatSlice';
-import { currentUser } from '@/data/mockData';
 import { Send, Paperclip, SmilePlus, AtSign, Bold, Italic, Code } from 'lucide-react';
-import type { Message } from '@/types';
+import { createLocalMessage } from '@/lib/helpers';
 
-interface Props {
+interface MessageInputProps {
   threadId?: string;
   onSend?: () => void;
 }
 
-const MessageInput = ({ threadId, onSend }: Props) => {
+const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
   const { activeChatContext } = useAppSelector(s => s.ui);
+  const currentUser = useAppSelector(s => s.auth.user);
   const dispatch = useAppDispatch();
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const contextId = threadId || activeChatContext?.id || '';
 
-  const handleSend = () => {
-    if (!content.trim() || !contextId) return;
+  const handleSend = useCallback(() => {
+    if (!content.trim() || !contextId || !currentUser) return;
 
-    const newMessage: Message = {
-      _id: `msg_${Date.now()}`,
-      senderId: currentUser._id,
-      channelId: activeChatContext?.type === 'channel' ? activeChatContext.id : undefined,
-      conversationId: activeChatContext?.type === 'conversation' ? activeChatContext.id : undefined,
-      type: 'text',
-      content: content.trim(),
-      attachments: [],
-      reactions: [],
-      threadId: threadId || null,
-      replyCount: 0,
-      lastReplyAt: null,
-      mentions: [],
-      dmStatus: activeChatContext?.type === 'conversation' ? 'sent' : null,
-      dmDeliveredAt: null,
-      dmSeenAt: null,
-      receipts: [],
-      isEdited: false,
-      editedAt: null,
-      deletedAt: null,
-      deletedBy: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
+    const newMessage = createLocalMessage(content.trim(), currentUser._id, activeChatContext, threadId);
     dispatch(addMessage({ contextId, message: newMessage }));
     setContent('');
     onSend?.();
 
-    // Auto-resize
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  };
+  }, [content, contextId, currentUser, activeChatContext, threadId, dispatch, onSend]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-  };
+  }, [handleSend]);
 
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
-    // Auto-resize
     const el = e.target;
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
-  };
+  }, []);
 
   return (
     <div className="px-4 md:px-6 pb-4 pt-2">

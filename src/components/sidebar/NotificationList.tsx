@@ -1,3 +1,4 @@
+import { useMemo, useCallback } from 'react';
 import { notifications, userMap } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -5,6 +6,7 @@ import { AtSign, MessageSquare, SmilePlus, Mail, Users, Bell } from 'lucide-reac
 import type { NotificationType, Notification } from '@/types';
 import { useAppDispatch } from '@/app/store';
 import { setActiveChatContext, setActiveNav } from '@/features/uiSlice';
+import { getInitials } from '@/lib/helpers';
 
 const iconMap: Record<NotificationType, typeof AtSign> = {
   mention: AtSign,
@@ -19,11 +21,13 @@ const iconMap: Record<NotificationType, typeof AtSign> = {
 
 const NotificationList = () => {
   const dispatch = useAppDispatch();
-  const sorted = [...notifications].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+
+  const sorted = useMemo(
+    () => [...notifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [],
   );
 
-  const handleClick = (notif: Notification) => {
+  const handleClick = useCallback((notif: Notification) => {
     if (notif.channelId) {
       dispatch(setActiveChatContext({ type: 'channel', id: notif.channelId }));
       dispatch(setActiveNav('teams'));
@@ -31,7 +35,7 @@ const NotificationList = () => {
       dispatch(setActiveChatContext({ type: 'conversation', id: notif.conversationId }));
       dispatch(setActiveNav('chat'));
     }
-  };
+  }, [dispatch]);
 
   return (
     <div className="space-y-0.5">
@@ -49,7 +53,7 @@ const NotificationList = () => {
           >
             <Avatar className="w-8 h-8 shrink-0 mt-0.5">
               <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
-                {actor?.name?.split(' ').map(n => n[0]).join('') || '?'}
+                {getInitials(actor?.name)}
               </AvatarFallback>
             </Avatar>
 

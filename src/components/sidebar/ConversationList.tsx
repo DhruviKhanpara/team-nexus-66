@@ -4,6 +4,20 @@ import { conversations, userMap, statusMap } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { Users } from 'lucide-react';
+import { useMemo, useCallback } from 'react';
+import { getConversationDisplayName, getInitials } from '@/lib/helpers';
+import type { ChatContext } from '@/types';
+
+const getPresenceColor = (userId: string | undefined): string => {
+  if (!userId) return '';
+  const status = statusMap[userId];
+  if (!status) return 'bg-status-offline';
+  switch (status.presence) {
+    case 'online': return 'bg-status-online';
+    case 'away': return 'bg-status-away';
+    default: return 'bg-status-offline';
+  }
+};
 
 const ConversationList = () => {
   const { activeChatContext, searchQuery } = useAppSelector(s => s.ui);
@@ -11,47 +25,32 @@ const ConversationList = () => {
   const { readStates } = useAppSelector(s => s.chat);
   const dispatch = useAppDispatch();
 
-  const getConversationName = (conv: typeof conversations[0]) => {
-    if (conv.type === 'group') return conv.name || 'Group Chat';
-    const other = conv.participants.find(p => p.userId !== currentUser?._id);
-    return other ? userMap[other.userId]?.name || 'Unknown' : 'Unknown';
-  };
+  const handleSelect = useCallback((ctx: ChatContext) => {
+    dispatch(setActiveChatContext(ctx));
+  }, [dispatch]);
 
-  const getOtherUserId = (conv: typeof conversations[0]) => {
-    if (conv.type === 'direct') {
-      return conv.participants.find(p => p.userId !== currentUser?._id)?.userId;
-    }
-    return null;
-  };
-
-  const getPresenceColor = (userId: string | undefined) => {
-    if (!userId) return '';
-    const status = statusMap[userId];
-    if (!status) return 'bg-status-offline';
-    switch (status.presence) {
-      case 'online': return 'bg-status-online';
-      case 'away': return 'bg-status-away';
-      default: return 'bg-status-offline';
-    }
-  };
-
-  const sorted = [...conversations].sort((a, b) => {
-    const aTime = a.lastMessage?.sentAt || a.createdAt;
-    const bTime = b.lastMessage?.sentAt || b.createdAt;
-    return new Date(bTime).getTime() - new Date(aTime).getTime();
-  });
-
-  const filtered = sorted.filter(c => {
-    if (!searchQuery) return true;
-    return getConversationName(c).toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const filtered = useMemo(() => {
+    const sorted = [...conversations].sort((a, b) => {
+      const aTime = a.lastMessage?.sentAt || a.createdAt;
+      const bTime = b.lastMessage?.sentAt || b.createdAt;
+      return new Date(bTime).getTime() - new Date(aTime).getTime();
+    });
+    if (!searchQuery) return sorted;
+    return sorted.filter(c =>
+      getConversationDisplayName(c, currentUser?._id, userMap)
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery, currentUser?._id]);
 
   return (
     <div className="space-y-0.5">
       {filtered.map(conv => {
-        const name = getConversationName(conv);
+        const name = getConversationDisplayName(conv, currentUser?._id, userMap);
         const isActive = activeChatContext?.type === 'conversation' && activeChatContext.id === conv._id;
-        const otherUserId = getOtherUserId(conv);
+        const otherUserId = conv.type === 'direct'
+          ? conv.participants.find(p => p.userId !== currentUser?._id)?.userId
+          : undefined;
         const unread = readStates.find(r => r.conversationId === conv._id)?.unreadCount || 0;
         const lastMsg = conv.lastMessage;
         const senderName = lastMsg?.senderId ? userMap[lastMsg.senderId]?.name?.split(' ')[0] : null;
@@ -59,11 +58,9 @@ const ConversationList = () => {
         return (
           <button
             key={conv._id}
-            onClick={() => dispatch(setActiveChatContext({ type: 'conversation', id: conv._id }))}
+            onClick={() => handleSelect({ type: 'conversation', id: conv._id })}
             className={`flex items-center gap-3 w-full p-2.5 rounded-lg transition-colors ${
-              isActive
-                ? 'bg-accent'
-                : 'hover:bg-accent/50'
+              isActive ? 'bg-accent' : 'hover:bg-accent/50'
             }`}
           >
             {/* Avatar */}
@@ -75,7 +72,7 @@ const ConversationList = () => {
               ) : (
                 <Avatar className="w-10 h-10">
                   <AvatarFallback className="text-xs font-semibold bg-secondary text-secondary-foreground">
-                    {name.split(' ').map(n => n[0]).join('')}
+                    {getInitials(name)}
                   </AvatarFallback>
                 </Avatar>
               )}

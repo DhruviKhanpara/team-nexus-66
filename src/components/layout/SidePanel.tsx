@@ -4,22 +4,16 @@ import ConversationList from '@/components/sidebar/ConversationList';
 import ActivityFeed from '@/components/sidebar/ActivityFeed';
 import NotificationList from '@/components/sidebar/NotificationList';
 import SearchBar from '@/components/sidebar/SearchBar';
+import { SIDE_PANEL_TITLES } from '@/lib/constants';
 
 const SidePanel = () => {
   const { activeNav } = useAppSelector(s => s.ui);
-
-  const titles: Record<string, string> = {
-    activity: 'Activity',
-    chat: 'Chat',
-    teams: 'Teams',
-    notifications: 'Notifications',
-  };
 
   return (
     <aside className="h-full w-[300px] border-r border-border bg-sidebar flex flex-col">
       {/* Header */}
       <div className="p-4 pb-2">
-        <h2 className="text-lg font-semibold text-sidebar-foreground">{titles[activeNav]}</h2>
+        <h2 className="text-lg font-semibold text-sidebar-foreground">{SIDE_PANEL_TITLES[activeNav]}</h2>
         <SearchBar />
       </div>
 

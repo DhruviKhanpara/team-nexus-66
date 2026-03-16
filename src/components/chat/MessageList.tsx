@@ -1,6 +1,29 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { useAppSelector } from '@/app/store';
 import MessageBubble from './MessageBubble';
+import { shouldShowAvatar } from '@/lib/helpers';
+import type { Message } from '@/types';
+
+interface DateGroup {
+  date: string;
+  msgs: Message[];
+}
+
+const groupMessagesByDate = (messages: Message[]): DateGroup[] => {
+  const grouped: DateGroup[] = [];
+  messages.forEach(msg => {
+    const date = new Date(msg.createdAt).toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric',
+    });
+    const last = grouped[grouped.length - 1];
+    if (last && last.date === date) {
+      last.msgs.push(msg);
+    } else {
+      grouped.push({ date, msgs: [msg] });
+    }
+  });
+  return grouped;
+};
 
 const MessageList = () => {
   const { activeChatContext } = useAppSelector(s => s.ui);
@@ -9,6 +32,8 @@ const MessageList = () => {
 
   const contextId = activeChatContext?.id || '';
   const contextMessages = messages[contextId] || [];
+
+  const grouped = useMemo(() => groupMessagesByDate(contextMessages), [contextMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -21,20 +46,6 @@ const MessageList = () => {
       </div>
     );
   }
-
-  // Group messages by date
-  const grouped: { date: string; msgs: typeof contextMessages }[] = [];
-  contextMessages.forEach(msg => {
-    const date = new Date(msg.createdAt).toLocaleDateString('en-US', {
-      weekday: 'long', month: 'long', day: 'numeric',
-    });
-    const last = grouped[grouped.length - 1];
-    if (last && last.date === date) {
-      last.msgs.push(msg);
-    } else {
-      grouped.push({ date, msgs: [msg] });
-    }
-  });
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4">
@@ -49,15 +60,18 @@ const MessageList = () => {
 
           {group.msgs.map((msg, i) => {
             const prevMsg = i > 0 ? group.msgs[i - 1] : null;
-            const showAvatar = !prevMsg ||
-              prevMsg.senderId !== msg.senderId ||
-              new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() > 5 * 60 * 1000;
+            const showAv = shouldShowAvatar(
+              msg.senderId,
+              msg.createdAt,
+              prevMsg?.senderId,
+              prevMsg?.createdAt,
+            );
 
             return (
               <MessageBubble
                 key={msg._id}
                 message={msg}
-                showAvatar={showAvatar}
+                showAvatar={showAv}
               />
             );
           })}
