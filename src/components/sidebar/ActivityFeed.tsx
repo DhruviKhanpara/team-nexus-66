@@ -1,7 +1,8 @@
 import { notifications, userMap } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
-import { getActivityLabel, getInitials } from '@/lib/helpers';
+import { getInitials } from '@/lib/helpers';
+import { getActivityLabel } from '@/domain/chat';
 import { useMemo } from 'react';
 
 const ActivityFeed = () => {

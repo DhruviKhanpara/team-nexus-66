@@ -1,29 +1,13 @@
+/**
+ * MessageList — renders messages grouped by date.
+ *
+ * Uses domain/chat/chat.logic for grouping and avatar logic.
+ */
+
 import { useRef, useEffect, useMemo } from 'react';
 import { useAppSelector } from '@/app/store';
 import MessageBubble from './MessageBubble';
 import { shouldShowAvatar, groupMessagesByDate } from '@/domain/chat';
-import type { Message } from '@/types';
-
-interface DateGroup {
-  date: string;
-  msgs: Message[];
-}
-
-const groupMessagesByDate = (messages: Message[]): DateGroup[] => {
-  const grouped: DateGroup[] = [];
-  messages.forEach(msg => {
-    const date = new Date(msg.createdAt).toLocaleDateString('en-US', {
-      weekday: 'long', month: 'long', day: 'numeric',
-    });
-    const last = grouped[grouped.length - 1];
-    if (last && last.date === date) {
-      last.msgs.push(msg);
-    } else {
-      grouped.push({ date, msgs: [msg] });
-    }
-  });
-  return grouped;
-};
 
 const MessageList = () => {
   const { activeChatContext } = useAppSelector(s => s.ui);
@@ -58,8 +42,8 @@ const MessageList = () => {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {group.msgs.map((msg, i) => {
-            const prevMsg = i > 0 ? group.msgs[i - 1] : null;
+          {group.messages.map((msg, i) => {
+            const prevMsg = i > 0 ? group.messages[i - 1] : null;
             const showAv = shouldShowAvatar(
               msg.senderId,
               msg.createdAt,

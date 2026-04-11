@@ -5,7 +5,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { Users } from 'lucide-react';
 import { useMemo, useCallback } from 'react';
-import { getConversationDisplayName, getInitials } from '@/lib/helpers';
+import { getInitials } from '@/lib/helpers';
+import { getConversationDisplayName } from '@/domain/chat';
 import type { ChatContext } from '@/types';
 
 const getPresenceColor = (userId: string | undefined): string => {

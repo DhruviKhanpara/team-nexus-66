@@ -1,6 +1,12 @@
+/**
+ * MessageInput — chat text input with formatting toolbar.
+ *
+ * Uses the sendMessage use case from the chat domain instead of
+ * directly dispatching Redux actions.
+ */
+
 import { useState, useRef, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/store';
-import { addMessage } from '@/features/chatSlice';
 import { Send, Paperclip, SmilePlus, AtSign, Bold, Italic, Code } from 'lucide-react';
 import { sendMessage } from '@/domain/chat';
 
@@ -16,20 +22,25 @@ const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const contextId = threadId || activeChatContext?.id || '';
-
   const handleSend = useCallback(() => {
-    if (!content.trim() || !contextId || !currentUser) return;
+    if (!currentUser || !activeChatContext) return;
 
-    const newMessage = createLocalMessage(content.trim(), currentUser._id, activeChatContext, threadId);
-    dispatch(addMessage({ contextId, message: newMessage }));
-    setContent('');
-    onSend?.();
+    const success = sendMessage(
+      content,
+      currentUser._id,
+      activeChatContext,
+      dispatch,
+      threadId,
+    );
 
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+    if (success) {
+      setContent('');
+      onSend?.();
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     }
-  }, [content, contextId, currentUser, activeChatContext, threadId, dispatch, onSend]);
+  }, [content, currentUser, activeChatContext, threadId, dispatch, onSend]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
