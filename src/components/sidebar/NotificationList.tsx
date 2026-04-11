@@ -1,3 +1,9 @@
+/**
+ * NotificationList — renders notifications, clickable to navigate.
+ *
+ * Uses domain/chat use cases for navigation instead of direct Redux dispatch.
+ */
+
 import { useMemo, useCallback } from 'react';
 import { notifications, userMap } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -5,8 +11,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { AtSign, MessageSquare, SmilePlus, Mail, Users, Bell } from 'lucide-react';
 import type { NotificationType, Notification } from '@/types';
 import { useAppDispatch } from '@/app/store';
-import { setActiveChatContext, setActiveNav } from '@/features/uiSlice';
 import { getInitials } from '@/lib/helpers';
+import { navigateToChat } from '@/domain/chat';
 
 const iconMap: Record<NotificationType, typeof AtSign> = {
   mention: AtSign,
@@ -29,11 +35,9 @@ const NotificationList = () => {
 
   const handleClick = useCallback((notif: Notification) => {
     if (notif.channelId) {
-      dispatch(setActiveChatContext({ type: 'channel', id: notif.channelId }));
-      dispatch(setActiveNav('teams'));
+      navigateToChat('channel', notif.channelId, dispatch);
     } else if (notif.conversationId) {
-      dispatch(setActiveChatContext({ type: 'conversation', id: notif.conversationId }));
-      dispatch(setActiveNav('chat'));
+      navigateToChat('conversation', notif.conversationId, dispatch);
     }
   }, [dispatch]);
 

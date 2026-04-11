@@ -1,5 +1,11 @@
+/**
+ * ChatView — main chat area with header, messages, and input.
+ *
+ * Uses the markAsRead use case from the chat domain.
+ */
+
 import { useAppSelector, useAppDispatch } from '@/app/store';
-import { markContextAsRead } from '@/features/chatSlice';
+import { markAsRead } from '@/domain/chat';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -11,7 +17,7 @@ const ChatView = () => {
 
   useEffect(() => {
     if (activeChatContext) {
-      dispatch(markContextAsRead({ type: activeChatContext.type, id: activeChatContext.id }));
+      markAsRead(activeChatContext.type, activeChatContext.id, dispatch);
     }
   }, [activeChatContext, dispatch]);
 
