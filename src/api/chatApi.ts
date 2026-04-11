@@ -1,3 +1,12 @@
+/**
+ * Chat domain API endpoints.
+ *
+ * Pure HTTP call definitions — no business logic.
+ * Covers: organizations, teams, channels, conversations, messages,
+ * threads, read states, notifications, pinned messages, user statuses,
+ * memberships, files, and search.
+ */
+
 import { baseApi } from './baseApi';
 import type {
   Team, Channel, Conversation, Message, ReadState,
@@ -7,13 +16,13 @@ import type {
 
 export const chatApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    // Organizations
+    // ── Organizations ──────────────────────────────────────────────────
     getOrganizations: builder.query<Organization[], void>({
       query: () => '/organizations',
       providesTags: ['Organization'],
     }),
 
-    // Teams
+    // ── Teams ──────────────────────────────────────────────────────────
     getTeams: builder.query<Team[], string>({
       query: (orgId) => `/organizations/${orgId}/teams`,
       providesTags: ['Team'],
@@ -27,7 +36,7 @@ export const chatApi = baseApi.injectEndpoints({
       invalidatesTags: ['Team'],
     }),
 
-    // Channels
+    // ── Channels ───────────────────────────────────────────────────────
     getChannels: builder.query<Channel[], string>({
       query: (teamId) => `/teams/${teamId}/channels`,
       providesTags: ['Channel'],
@@ -41,7 +50,7 @@ export const chatApi = baseApi.injectEndpoints({
       invalidatesTags: ['Channel'],
     }),
 
-    // Conversations
+    // ── Conversations ──────────────────────────────────────────────────
     getConversations: builder.query<Conversation[], string>({
       query: (orgId) => `/organizations/${orgId}/conversations`,
       providesTags: ['Conversation'],
@@ -55,7 +64,7 @@ export const chatApi = baseApi.injectEndpoints({
       invalidatesTags: ['Conversation'],
     }),
 
-    // Messages
+    // ── Messages ───────────────────────────────────────────────────────
     getMessages: builder.query<Message[], { type: 'channel' | 'conversation'; id: string; before?: string }>({
       query: ({ type, id, before }) => ({
         url: type === 'channel' ? `/channels/${id}/messages` : `/conversations/${id}/messages`,
@@ -103,7 +112,7 @@ export const chatApi = baseApi.injectEndpoints({
       invalidatesTags: ['Message'],
     }),
 
-    // Thread messages
+    // ── Threads ────────────────────────────────────────────────────────
     getThreadMessages: builder.query<Message[], string>({
       query: (threadId) => `/messages/${threadId}/thread`,
       providesTags: ['ThreadMessages'],
@@ -117,7 +126,7 @@ export const chatApi = baseApi.injectEndpoints({
       invalidatesTags: ['ThreadMessages', 'Message'],
     }),
 
-    // Read State
+    // ── Read State ─────────────────────────────────────────────────────
     getReadStates: builder.query<ReadState[], void>({
       query: () => '/read-states',
       providesTags: ['ReadState'],
@@ -130,7 +139,7 @@ export const chatApi = baseApi.injectEndpoints({
       invalidatesTags: ['ReadState'],
     }),
 
-    // Notifications
+    // ── Notifications ──────────────────────────────────────────────────
     getNotifications: builder.query<Notification[], void>({
       query: () => '/notifications',
       providesTags: ['Notification'],
@@ -150,7 +159,7 @@ export const chatApi = baseApi.injectEndpoints({
       invalidatesTags: ['Notification'],
     }),
 
-    // Pinned Messages
+    // ── Pinned Messages ────────────────────────────────────────────────
     getPinnedMessages: builder.query<PinnedMessage[], { type: 'channel' | 'conversation'; id: string }>({
       query: ({ type, id }) => `/${type === 'channel' ? 'channels' : 'conversations'}/${id}/pinned`,
       providesTags: ['PinnedMessage'],
@@ -170,7 +179,7 @@ export const chatApi = baseApi.injectEndpoints({
       invalidatesTags: ['PinnedMessage'],
     }),
 
-    // User Status
+    // ── User Status ────────────────────────────────────────────────────
     getUserStatuses: builder.query<UserStatus[], string[]>({
       query: (userIds) => ({
         url: '/user-statuses',
@@ -187,19 +196,19 @@ export const chatApi = baseApi.injectEndpoints({
       invalidatesTags: ['UserStatus'],
     }),
 
-    // Members
+    // ── Members ────────────────────────────────────────────────────────
     getMembers: builder.query<Membership[], { scope: string; id: string }>({
       query: ({ scope, id }) => `/${scope}s/${id}/members`,
       providesTags: ['Membership'],
     }),
 
-    // Files
+    // ── Files ──────────────────────────────────────────────────────────
     getFiles: builder.query<FileAttachment[], { type: 'channel' | 'conversation'; id: string }>({
       query: ({ type, id }) => `/${type === 'channel' ? 'channels' : 'conversations'}/${id}/files`,
       providesTags: ['File'],
     }),
 
-    // Search
+    // ── Search ─────────────────────────────────────────────────────────
     searchMessages: builder.query<Message[], { orgId: string; query: string }>({
       query: ({ orgId, query }) => ({
         url: `/organizations/${orgId}/search`,
