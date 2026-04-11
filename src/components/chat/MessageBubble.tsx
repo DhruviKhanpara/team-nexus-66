@@ -1,7 +1,12 @@
+/**
+ * MessageBubble — renders a single message with reactions, threads, and actions.
+ *
+ * Uses domain/chat use cases for user interactions instead of
+ * directly dispatching Redux actions.
+ */
+
 import { memo, useState, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/store';
-import { toggleReaction, softDeleteMessage } from '@/features/chatSlice';
-import { setActiveThread } from '@/features/uiSlice';
 import { userMap } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MessageSquare, SmilePlus, MoreHorizontal, Pencil, Trash2, Pin } from 'lucide-react';
@@ -9,6 +14,7 @@ import { format } from 'date-fns';
 import type { Message } from '@/types';
 import { QUICK_EMOJIS } from '@/lib/constants';
 import { getInitials } from '@/lib/helpers';
+import { toggleMessageReaction, deleteMessage, openThread } from '@/domain/chat';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,17 +40,17 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
 
   const handleReaction = useCallback((emoji: string) => {
     if (!currentUser) return;
-    dispatch(toggleReaction({ contextId, messageId: message._id, emoji, userId: currentUser._id }));
+    toggleMessageReaction(contextId, message._id, emoji, currentUser._id, dispatch);
     setShowEmojiPicker(false);
   }, [contextId, message._id, currentUser, dispatch]);
 
   const handleDelete = useCallback(() => {
     if (!currentUser) return;
-    dispatch(softDeleteMessage({ contextId, messageId: message._id, userId: currentUser._id }));
+    deleteMessage(contextId, message._id, currentUser._id, dispatch);
   }, [contextId, message._id, currentUser, dispatch]);
 
   const handleOpenThread = useCallback(() => {
-    dispatch(setActiveThread(message._id));
+    openThread(message._id, dispatch);
   }, [message._id, dispatch]);
 
   const toggleEmojiPicker = useCallback(() => {

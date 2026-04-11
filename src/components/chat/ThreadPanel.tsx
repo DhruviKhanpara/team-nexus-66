@@ -1,7 +1,11 @@
+/**
+ * ThreadPanel — thread view with parent message + replies.
+ *
+ * Uses domain/chat use cases for thread interactions.
+ */
+
 import { useAppSelector, useAppDispatch } from '@/app/store';
-import { setActiveThread } from '@/features/uiSlice';
-import { addThreadReply } from '@/features/chatSlice';
-import { userMap, currentUser } from '@/data/mockData';
+import { closeThread } from '@/domain/chat';
 import { X } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
@@ -13,7 +17,6 @@ const ThreadPanel = () => {
 
   if (!activeThreadId || !activeChatContext) return null;
 
-  // Find parent message
   const contextMessages = messages[activeChatContext.id] || [];
   const parentMessage = contextMessages.find(m => m._id === activeThreadId);
   const replies = threadMsgs[activeThreadId] || [];
@@ -26,7 +29,7 @@ const ThreadPanel = () => {
       <div className="h-14 min-h-[56px] border-b border-border flex items-center justify-between px-4">
         <h3 className="text-sm font-semibold text-card-foreground">Thread</h3>
         <button
-          onClick={() => dispatch(setActiveThread(null))}
+          onClick={() => closeThread(dispatch)}
           className="p-1.5 rounded hover:bg-accent transition-colors"
         >
           <X className="w-4 h-4 text-muted-foreground" />
