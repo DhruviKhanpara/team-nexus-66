@@ -1,3 +1,15 @@
+/**
+ * Auth Redux slice — STATE ONLY.
+ *
+ * Manages:
+ *  - Current user
+ *  - Auth token (marker for cookie-based auth)
+ *  - Authentication status
+ *
+ * Business logic (validation) lives in domain/auth/auth.logic.ts.
+ * Use cases (loginUser, logoutUser) live in domain/auth/auth.usecase.ts.
+ */
+
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { User, AuthState } from '@/types';
 import { currentUser } from '@/data/mockData';
