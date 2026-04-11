@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/app/store';
 import { addMessage } from '@/features/chatSlice';
 import { Send, Paperclip, SmilePlus, AtSign, Bold, Italic, Code } from 'lucide-react';
-import { createLocalMessage } from '@/lib/helpers';
+import { sendMessage } from '@/domain/chat';
 
 interface MessageInputProps {
   threadId?: string;

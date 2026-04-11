@@ -1,7 +1,7 @@
 import { useRef, useEffect, useMemo } from 'react';
 import { useAppSelector } from '@/app/store';
 import MessageBubble from './MessageBubble';
-import { shouldShowAvatar } from '@/lib/helpers';
+import { shouldShowAvatar, groupMessagesByDate } from '@/domain/chat';
 import type { Message } from '@/types';
 
 interface DateGroup {
