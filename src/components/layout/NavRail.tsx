@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/app/store';
 import { setActiveNav, toggleTheme } from '@/features/uiSlice';
-import { logout } from '@/features/authSlice';
+import { clearAuth } from '@/features/authSlice';
 import { useNavigate } from 'react-router-dom';
 import type { NavSection } from '@/types';
 import { notifications as mockNotifications } from '@/data/mockData';
@@ -33,7 +33,7 @@ const NavRail = () => {
   const unreadNotifCount = mockNotifications.filter(n => !n.isRead).length;
 
   const handleLogout = useCallback(() => {
-    dispatch(logout());
+    dispatch(clearAuth());
     navigate('/login');
   }, [dispatch, navigate]);
 
