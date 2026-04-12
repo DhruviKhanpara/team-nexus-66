@@ -1,28 +1,12 @@
 /**
- * Chat domain — pure business logic.
+ * Chat domain — pure helper functions.
  *
- * Rules:
- *  - No API calls
- *  - No Redux
- *  - No side effects
- *  - Only pure functions
+ * Display utilities and data transformation functions
+ * used by UI components. No API calls, no Redux.
  */
 
 import type { Message, Reaction } from '@/types/chat';
 import type { DateGroup } from './chat.types';
-
-// ── Message Validation ─────────────────────────────────────────────────
-
-/** Check if message content is valid for sending */
-export const isValidMessageContent = (content: string): boolean =>
-  content.trim().length > 0;
-
-/** Maximum allowed message length */
-export const MAX_MESSAGE_LENGTH = 4000;
-
-/** Check if content exceeds maximum length */
-export const isMessageTooLong = (content: string): boolean =>
-  content.length > MAX_MESSAGE_LENGTH;
 
 // ── Message Grouping ───────────────────────────────────────────────────
 
@@ -30,11 +14,6 @@ const MESSAGE_GROUP_THRESHOLD_MS = 5 * 60 * 1000;
 
 /**
  * Determine whether a new avatar/header should be shown for a message.
- *
- * A new group starts when:
- *  - It's the first message
- *  - The sender changed
- *  - More than 5 minutes passed since the previous message
  */
 export const shouldShowAvatar = (
   currentSenderId: string,
@@ -77,8 +56,6 @@ export const groupMessagesByDate = (messages: Message[]): DateGroup[] => {
 
 /**
  * Compute the next reactions array after toggling an emoji for a user.
- *
- * Returns a new array (immutable operation used by the slice).
  */
 export const computeToggledReactions = (
   reactions: Reaction[],
@@ -109,8 +86,6 @@ export const computeToggledReactions = (
 
 /**
  * Build a display name for a conversation.
- * For direct messages, returns the other participant's name.
- * For group chats, returns the group name.
  */
 export const getConversationDisplayName = (
   conv: { type: string; name: string | null; participants: { userId: string }[] },
