@@ -1,118 +1,73 @@
 /**
- * Auth API endpoints.
+ * Auth API — plain HTTP functions.
  *
- * Pure HTTP call definitions — no business logic, no state management.
- * Maps to the backend's auth routes:
- *   POST /auth/login
- *   POST /auth/register
- *   POST /auth/register/:inviteToken
- *   POST /auth/refresh
- *   POST /auth/logout
- *   POST /auth/forgot-password
- *   POST /auth/reset-password
- *   GET  /users/me/:checkParams
- *   GET  /users/profile/me
+ * No hooks, no Redux, no RTK Query.
+ * Each function calls apiClient and returns typed data.
  */
 
-import { baseApi } from './baseApi';
-import type { UserDto, LoginRequest, RegisterRequest, LoginResponseDto, RegisterResponseDto, UserProfileDto } from '@/domain/auth/auth.types';
+import { apiClient } from './baseApi';
+import type {
+  LoginRequest,
+  RegisterRequest,
+  LoginResponseDto,
+  RegisterResponseDto,
+  UserDto,
+  UserProfileDto,
+} from '@/domain/auth/auth.types';
 
-export const authApi = baseApi.injectEndpoints({
-  endpoints: (builder) => ({
-    login: builder.mutation<LoginResponseDto, LoginRequest>({
-      query: (credentials) => ({
-        url: '/auth/login',
-        method: 'POST',
-        body: credentials,
-      }),
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+export const authApi = {
+  login: (credentials: LoginRequest) =>
+    apiClient<LoginResponseDto>('/auth/login', {
+      method: 'POST',
+      body: credentials,
     }),
 
-    register: builder.mutation<RegisterResponseDto, RegisterRequest>({
-      query: (data) => ({
-        url: '/auth/register',
-        method: 'POST',
-        body: data,
-      }),
+  register: (data: RegisterRequest) =>
+    apiClient<RegisterResponseDto>('/auth/register', {
+      method: 'POST',
+      body: data,
     }),
 
-    registerWithInvite: builder.mutation<RegisterResponseDto, RegisterRequest & { inviteToken: string }>({
-      query: ({ inviteToken, ...data }) => ({
-        url: `/auth/register/${inviteToken}`,
-        method: 'POST',
-        body: data,
-      }),
+  registerWithInvite: (data: RegisterRequest & { inviteToken: string }) => {
+    const { inviteToken, ...body } = data;
+    return apiClient<RegisterResponseDto>(`/auth/register/${inviteToken}`, {
+      method: 'POST',
+      body,
+    });
+  },
+
+  logout: () =>
+    apiClient<void>('/auth/logout', { method: 'POST' }),
+
+  forgotPassword: (data: { email: string }) =>
+    apiClient<void>('/auth/forgot-password', {
+      method: 'POST',
+      body: data,
     }),
 
-    refreshToken: builder.mutation<void, void>({
-      query: () => ({
-        url: '/auth/refresh',
-        method: 'POST',
-      }),
+  resetPassword: (data: { email: string; otp: string; newPassword: string }) =>
+    apiClient<void>('/auth/reset-password', {
+      method: 'POST',
+      body: data,
     }),
 
-    logout: builder.mutation<void, void>({
-      query: () => ({
-        url: '/auth/logout',
-        method: 'POST',
-      }),
+  getMyDetails: (checkParams: string) =>
+    apiClient<UserDto>(`/users/me/${checkParams}`),
+
+  getMyProfile: () =>
+    apiClient<UserProfileDto>('/users/profile/me'),
+
+  updateProfile: (data: { name?: string; bio?: string }) =>
+    apiClient<{ user: UserDto }>('/users/profile', {
+      method: 'PUT',
+      body: data,
     }),
 
-    forgotPassword: builder.mutation<void, { email: string }>({
-      query: (data) => ({
-        url: '/auth/forgot-password',
-        method: 'POST',
-        body: data,
-      }),
+  updateAvatar: (data: FormData) =>
+    apiClient<{ icon: string }>('/users/profile/avatar', {
+      method: 'PUT',
+      body: data,
     }),
-
-    resetPassword: builder.mutation<void, { email: string; otp: string; newPassword: string }>({
-      query: (data) => ({
-        url: '/auth/reset-password',
-        method: 'POST',
-        body: data,
-      }),
-    }),
-
-    getMyDetails: builder.query<UserDto, string>({
-      query: (checkParams) => `/users/me/${checkParams}`,
-      providesTags: ['User'],
-    }),
-
-    getMyProfile: builder.query<UserProfileDto, void>({
-      query: () => '/users/profile/me',
-      providesTags: ['User'],
-    }),
-
-    updateProfile: builder.mutation<{ user: UserDto }, { name?: string; bio?: string }>({
-      query: (data) => ({
-        url: '/users/profile',
-        method: 'PUT',
-        body: data,
-      }),
-      invalidatesTags: ['User'],
-    }),
-
-    updateAvatar: builder.mutation<{ icon: string }, FormData>({
-      query: (data) => ({
-        url: '/users/profile/avatar',
-        method: 'PUT',
-        body: data,
-      }),
-      invalidatesTags: ['User'],
-    }),
-  }),
-});
-
-export const {
-  useLoginMutation,
-  useRegisterMutation,
-  useRegisterWithInviteMutation,
-  useRefreshTokenMutation,
-  useLogoutMutation,
-  useForgotPasswordMutation,
-  useResetPasswordMutation,
-  useGetMyDetailsQuery,
-  useGetMyProfileQuery,
-  useUpdateProfileMutation,
-  useUpdateAvatarMutation,
-} = authApi;
+};

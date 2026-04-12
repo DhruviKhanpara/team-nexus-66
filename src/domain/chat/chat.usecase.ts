@@ -1,26 +1,26 @@
 /**
- * Chat domain — use cases.
+ * Chat use cases — framework-agnostic where possible.
  *
- * Orchestrates chat-related user flows:
- *  1. Validate input (via chat.logic)
- *  2. Create optimistic data (via chat.mapper)
- *  3. Dispatch state updates (via Redux)
+ * For local/optimistic operations (mock data), these still accept dispatch
+ * since there's no real API yet. When the real API is connected, these will
+ * call chatApi instead and return data for the component to dispatch.
  *
- * Currently operates against local Redux state with mock data.
- * When the real API is ready, these use cases will also call
- * the chatApi endpoints before/after dispatching.
+ * Navigation use cases are kept here as thin orchestrators.
  */
 
 import type { AppDispatch } from '@/app/store';
 import type { ChatContext } from '@/types/ui';
-import { addMessage, addThreadReply, toggleReaction, softDeleteMessage, editMessageAction, markContextAsRead } from '@/features/chatSlice';
+import {
+  addMessage, addThreadReply, toggleReaction,
+  softDeleteMessage, editMessageAction, markContextAsRead,
+} from '@/features/chatSlice';
 import { setActiveChatContext, setActiveThread, setActiveNav } from '@/features/uiSlice';
-import { isValidMessageContent } from './chat.logic';
 import { createLocalMessage } from './chat.mapper';
 import type { NavSection } from '@/types/ui';
 
 /**
  * Send a message to a channel or conversation.
+ * (Optimistic — works against local Redux state with mock data)
  */
 export const sendMessage = (
   content: string,
@@ -29,17 +29,14 @@ export const sendMessage = (
   dispatch: AppDispatch,
   threadId?: string,
 ): boolean => {
-  if (!isValidMessageContent(content) || !context || !senderId) {
-    return false;
-  }
+  if (!content.trim() || !context || !senderId) return false;
 
-  const contextId = threadId || context.id;
   const message = createLocalMessage(content.trim(), senderId, context, threadId);
 
   if (threadId) {
     dispatch(addThreadReply({ threadId, message }));
   } else {
-    dispatch(addMessage({ contextId, message }));
+    dispatch(addMessage({ contextId: context.id, message }));
   }
 
   return true;
@@ -86,7 +83,7 @@ export const toggleMessageReaction = (
 };
 
 /**
- * Soft-delete a message (mark as deleted without removing).
+ * Soft-delete a message.
  */
 export const deleteMessage = (
   contextId: string,
@@ -106,7 +103,7 @@ export const editMessage = (
   content: string,
   dispatch: AppDispatch,
 ) => {
-  if (!isValidMessageContent(content)) return false;
+  if (!content.trim()) return false;
   dispatch(editMessageAction({ contextId, messageId, content: content.trim() }));
   return true;
 };
