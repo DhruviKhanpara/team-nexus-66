@@ -33,7 +33,7 @@ const NavRail = () => {
   const unreadNotifCount = mockNotifications.filter(n => !n.isRead).length;
 
   const handleLogout = useCallback(() => {
-    dispatch(logout());
+    dispatch(clearAuth());
     navigate('/login');
   }, [dispatch, navigate]);
 
