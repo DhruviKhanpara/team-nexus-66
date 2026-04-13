@@ -4,4 +4,3 @@
 export * from './chat.helpers';
 export * from './chat.mapper';
 export * from './chat.usecase';
-export type * from './chat.types';

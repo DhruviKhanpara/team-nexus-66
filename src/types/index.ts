@@ -5,5 +5,10 @@ export type {
   ConversationType, GroupRole, Participant, LastMessage, Conversation,
   MessageType, Reaction, Receipt, DmStatus, FileAttachment, Message,
   ReadState, NotificationType, Notification, PinnedMessage,
+  MessageViewModel, NotificationViewModel, SendMessageInput, DateGroup,
 } from './chat';
 export type { NavSection, ChatContext, AuthState } from './ui';
+export type {
+  UserDto, UserProfileDto, LoginResponseDto, RegisterResponseDto,
+  LoginRequest, RegisterRequest, UserViewModel,
+} from './auth';
