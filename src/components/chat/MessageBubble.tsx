@@ -1,12 +1,11 @@
 /**
  * MessageBubble — renders a single message with reactions, threads, and actions.
  *
- * Uses domain/chat use cases for user interactions instead of
- * directly dispatching Redux actions.
+ * Uses domain/chat use case hooks for interactions.
  */
 
 import { memo, useState, useCallback } from 'react';
-import { useAppSelector, useAppDispatch } from '@/app/store';
+import { useAppSelector } from '@/app/store';
 import { userMap } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MessageSquare, SmilePlus, MoreHorizontal, Pencil, Trash2, Pin } from 'lucide-react';
@@ -14,7 +13,7 @@ import { format } from 'date-fns';
 import type { Message } from '@/types';
 import { QUICK_EMOJIS } from '@/lib/constants';
 import { getInitials } from '@/lib/helpers';
-import { toggleMessageReaction, deleteMessage, openThread } from '@/domain/chat';
+import { usePersistReaction, usePersistDeleteMessage, useThread } from '@/domain/chat';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,27 +30,28 @@ interface MessageBubbleProps {
 const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProps) => {
   const { activeChatContext } = useAppSelector(s => s.ui);
   const currentUser = useAppSelector(s => s.auth.user);
-  const dispatch = useAppDispatch();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const { toggleMessageReaction } = usePersistReaction();
+  const { deleteMessage } = usePersistDeleteMessage();
+  const { openThread } = useThread();
 
   const sender = userMap[message.senderId];
   const isOwn = message.senderId === currentUser?._id;
   const contextId = activeChatContext?.id || '';
 
   const handleReaction = useCallback((emoji: string) => {
-    if (!currentUser) return;
-    toggleMessageReaction(contextId, message._id, emoji, currentUser._id, dispatch);
+    toggleMessageReaction(contextId, message._id, emoji);
     setShowEmojiPicker(false);
-  }, [contextId, message._id, currentUser, dispatch]);
+  }, [contextId, message._id, toggleMessageReaction]);
 
   const handleDelete = useCallback(() => {
-    if (!currentUser) return;
-    deleteMessage(contextId, message._id, currentUser._id, dispatch);
-  }, [contextId, message._id, currentUser, dispatch]);
+    deleteMessage(contextId, message._id);
+  }, [contextId, message._id, deleteMessage]);
 
   const handleOpenThread = useCallback(() => {
-    openThread(message._id, dispatch);
-  }, [message._id, dispatch]);
+    openThread(message._id);
+  }, [message._id, openThread]);
 
   const toggleEmojiPicker = useCallback(() => {
     setShowEmojiPicker(prev => !prev);
@@ -68,7 +68,6 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
   return (
     <div className={`chat-message-hover group rounded-md px-2 py-0.5 ${showAvatar ? 'mt-3' : ''}`}>
       <div className="flex gap-3">
-        {/* Avatar or spacer */}
         <div className="w-8 shrink-0">
           {showAvatar && (
             <Avatar className="w-8 h-8">
@@ -79,7 +78,6 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
           )}
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
           {showAvatar && (
             <div className="flex items-baseline gap-2 mb-0.5">
@@ -99,7 +97,6 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
             {message.content}
           </p>
 
-          {/* Reactions */}
           {message.reactions.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {message.reactions.map(reaction => (
@@ -119,7 +116,6 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
             </div>
           )}
 
-          {/* Thread indicator */}
           {!isThread && message.replyCount > 0 && (
             <button
               onClick={handleOpenThread}
@@ -131,7 +127,6 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
           )}
         </div>
 
-        {/* Hover actions */}
         <div className="message-actions flex items-start gap-0.5 pt-0.5">
           <div className="relative">
             <button

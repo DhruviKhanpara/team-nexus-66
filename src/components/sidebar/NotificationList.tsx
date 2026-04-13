@@ -1,7 +1,7 @@
 /**
  * NotificationList — renders notifications, clickable to navigate.
  *
- * Uses domain/chat use cases for navigation instead of direct Redux dispatch.
+ * Uses useNavigateChat use case hook.
  */
 
 import { useMemo, useCallback } from 'react';
@@ -10,9 +10,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { AtSign, MessageSquare, SmilePlus, Mail, Users, Bell } from 'lucide-react';
 import type { NotificationType, Notification } from '@/types';
-import { useAppDispatch } from '@/app/store';
 import { getInitials } from '@/lib/helpers';
-import { navigateToChat } from '@/domain/chat';
+import { useNavigateChat } from '@/domain/chat';
 
 const iconMap: Record<NotificationType, typeof AtSign> = {
   mention: AtSign,
@@ -26,7 +25,7 @@ const iconMap: Record<NotificationType, typeof AtSign> = {
 };
 
 const NotificationList = () => {
-  const dispatch = useAppDispatch();
+  const { navigateToChat } = useNavigateChat();
 
   const sorted = useMemo(
     () => [...notifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
@@ -35,11 +34,11 @@ const NotificationList = () => {
 
   const handleClick = useCallback((notif: Notification) => {
     if (notif.channelId) {
-      navigateToChat('channel', notif.channelId, dispatch);
+      navigateToChat('channel', notif.channelId);
     } else if (notif.conversationId) {
-      navigateToChat('conversation', notif.conversationId, dispatch);
+      navigateToChat('conversation', notif.conversationId);
     }
-  }, [dispatch]);
+  }, [navigateToChat]);
 
   return (
     <div className="space-y-0.5">
