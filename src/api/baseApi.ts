@@ -1,26 +1,37 @@
 /**
- * Base API client — plain fetch wrapper.
- *
- * Responsibilities:
- *  - Provides a configured fetch function with base URL
- *  - Unwraps the backend's { statusCode, exceptionCode, statusMessage, result } envelope
- *  - Handles token refresh automatically on 401
- *  - Normalizes errors into ApiError shape
- *
- * This replaces RTK Query. All API modules use `apiClient` for HTTP calls.
+ * RTK Query base API with:
+ *  - Cookie-based auth (credentials: 'include')
+ *  - Automatic 401 → refresh token → retry flow
+ *  - Backend envelope unwrapping ({ statusCode, result } → result)
+ *  - Normalized error format
  */
 
+import {
+  createApi,
+  fetchBaseQuery,
+  type BaseQueryFn,
+  type FetchArgs,
+  type FetchBaseQueryError,
+} from '@reduxjs/toolkit/query/react';
 import type { ApiResponse, ApiError } from './apiTypes';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl: BASE_URL,
+  credentials: 'include', // send cookies (access + refresh tokens)
+  prepareHeaders: (headers) => {
+    // Cookies are sent automatically; no manual token injection needed
+    return headers;
+  },
+});
+
+/**
+ * Mutex to prevent multiple concurrent refresh calls.
+ */
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
-/**
- * Attempt to refresh the access token using the httpOnly refresh cookie.
- * Returns true if refresh succeeded, false otherwise.
- */
 const refreshAccessToken = async (): Promise<boolean> => {
   try {
     const res = await fetch(`${BASE_URL}/auth/refresh`, {
@@ -33,9 +44,6 @@ const refreshAccessToken = async (): Promise<boolean> => {
   }
 };
 
-/**
- * Ensures only one refresh request is in-flight at a time.
- */
 const ensureRefresh = (): Promise<boolean> => {
   if (!isRefreshing) {
     isRefreshing = true;
@@ -47,66 +55,62 @@ const ensureRefresh = (): Promise<boolean> => {
   return refreshPromise!;
 };
 
-interface RequestOptions {
-  method?: string;
-  body?: unknown;
-  headers?: Record<string, string>;
-}
-
 /**
- * Core fetch wrapper that:
- *  1. Sends requests with credentials (cookies)
- *  2. Unwraps the backend response envelope
- *  3. Retries once on 401 after refreshing the token
- *  4. Throws ApiError on failure
+ * Custom baseQuery that:
+ *  1. Unwraps the backend envelope (result field)
+ *  2. On 401, attempts a token refresh and retries once
+ *  3. Normalizes errors into ApiError shape
  */
-export const apiClient = async <T = unknown>(
-  url: string,
-  options: RequestOptions = {},
-): Promise<T> => {
-  const doFetch = async (): Promise<Response> => {
-    const { method = 'GET', body, headers = {} } = options;
+const baseQueryWithRefresh: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+  args,
+  api,
+  extraOptions,
+) => {
+  let result = await rawBaseQuery(args, api, extraOptions);
 
-    const fetchOptions: RequestInit = {
-      method,
-      credentials: 'include',
-      headers: {
-        ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-        ...headers,
-      },
-    };
-
-    if (body) {
-      fetchOptions.body = body instanceof FormData ? body : JSON.stringify(body);
-    }
-
-    return fetch(`${BASE_URL}${url}`, fetchOptions);
-  };
-
-  let response = await doFetch();
-
-  // On 401, try refreshing the token and retry once
-  if (response.status === 401) {
+  // Handle 401 — attempt refresh and retry
+  if (result.error && result.error.status === 401) {
     const refreshed = await ensureRefresh();
     if (refreshed) {
-      response = await doFetch();
+      result = await rawBaseQuery(args, api, extraOptions);
     }
   }
 
-  // Parse response
-  const data = await response.json().catch(() => null);
+  // Unwrap backend envelope on success
+  if (result.data) {
+    const envelope = result.data as ApiResponse;
+    return { data: envelope.result };
+  }
 
-  if (!response.ok) {
-    const serverBody = data as ApiResponse | null;
+  // Normalize error
+  if (result.error) {
+    const serverBody = result.error.data as ApiResponse | undefined;
     const apiError: ApiError = {
-      status: response.status,
+      status: (result.error.status as number) || 500,
       exceptionCode: serverBody?.exceptionCode ?? null,
       message: serverBody?.statusMessage ?? 'An unexpected error occurred',
     };
-    throw apiError;
+    return {
+      error: {
+        status: apiError.status,
+        data: apiError,
+      } as FetchBaseQueryError,
+    };
   }
 
-  // Unwrap the envelope
-  const envelope = data as ApiResponse<T>;
-  return envelope.result;
+  return result;
 };
+
+/**
+ * Root RTK Query API. All feature-specific endpoints inject into this.
+ */
+export const baseApi = createApi({
+  reducerPath: 'api',
+  baseQuery: baseQueryWithRefresh,
+  tagTypes: [
+    'User', 'Organizations', 'Teams', 'Channels',
+    'Conversations', 'Messages', 'ThreadMessages',
+    'ReadStates', 'Notifications', 'Members',
+  ],
+  endpoints: () => ({}),
+});
