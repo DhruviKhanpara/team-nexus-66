@@ -1,19 +1,10 @@
 /**
  * Auth domain — DTO ↔ View Model mappers.
- *
- * Transforms server responses (DTOs) into UI-ready view models,
- * and vice-versa for request payloads.
- *
- * Rules:
- *  - No API calls
- *  - No Redux
- *  - Pure transformation functions
  */
 
 import type { User } from '@/types/user';
-import type { UserDto, UserProfileDto, UserViewModel } from './auth.types';
+import type { UserDto, UserProfileDto, UserViewModel } from '@/types/auth';
 
-/** Extract initials from a display name (e.g. "John Doe" → "JD") */
 const getInitials = (name: string): string =>
   name
     .split(' ')
@@ -23,10 +14,6 @@ const getInitials = (name: string): string =>
 
 /**
  * Map a login/register UserDto to the app's internal User model.
- *
- * The backend login/register endpoints return a minimal user shape
- * (no avatar, no organizationIds). This mapper fills in defaults
- * so the rest of the app can work with a complete User object.
  */
 export const mapUserDtoToUser = (dto: UserDto): User => ({
   _id: dto._id,
@@ -53,7 +40,7 @@ export const mapUserDtoToViewModel = (dto: UserDto): UserViewModel => ({
 });
 
 /**
- * Map a profile DTO (from GET /users/profile/me) to a UserViewModel.
+ * Map a profile DTO to a UserViewModel.
  */
 export const mapProfileDtoToViewModel = (dto: UserProfileDto): UserViewModel => ({
   _id: dto._id,
@@ -67,8 +54,7 @@ export const mapProfileDtoToViewModel = (dto: UserProfileDto): UserViewModel => 
 });
 
 /**
- * Map the internal User type to a UserViewModel for components
- * that already have a User from Redux state.
+ * Map internal User type to UserViewModel.
  */
 export const mapUserToViewModel = (user: User): UserViewModel => ({
   _id: user._id,

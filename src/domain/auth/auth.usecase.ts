@@ -1,46 +1,92 @@
 /**
- * Auth use cases — framework-agnostic.
+ * Auth use case hooks — service layer.
  *
- * Each use case:
- *  1. Calls the API layer
- *  2. Maps the response (DTO → internal model)
- *  3. Returns the result
+ * Pattern:
+ *  - useHydrateX → fetch + store data
+ *  - usePersistX → create/update/delete operations
  *
- * NO Redux dispatch, NO React hooks, NO validation (handled by Zod schemas in forms).
- * Components call use cases, then dispatch the result themselves.
+ * Uses RTK Query hooks for API calls, mappers for transformation,
+ * and dispatches results to Redux.
  */
 
-import { authApi } from '@/api/authApi';
+import { useCallback } from 'react';
+import { useAppDispatch } from '@/app/store';
+import { setUser, clearAuth } from '@/features/authSlice';
+import { useLoginMutation, useRegisterMutation, useLogoutMutation, useLazyGetMyProfileQuery } from '@/api/authApi';
 import { mapUserDtoToUser } from './auth.mapper';
-import type { LoginRequest, RegisterRequest } from './auth.types';
-import type { User } from '@/types/user';
+import type { LoginRequest, RegisterRequest } from '@/types/auth';
 
 /**
- * Login use case.
- *
- * @returns The mapped User on success
- * @throws ApiError on failure
+ * Hydrate current user profile into Redux.
  */
-export const loginUser = async (credentials: LoginRequest): Promise<User> => {
-  const response = await authApi.login(credentials);
-  return mapUserDtoToUser(response.user);
+export const useHydrateUser = () => {
+  const [fetchProfile, { isLoading }] = useLazyGetMyProfileQuery();
+  const dispatch = useAppDispatch();
+
+  const hydrateUser = useCallback(async () => {
+    const profile = await fetchProfile().unwrap();
+    const user = mapUserDtoToUser({
+      _id: profile._id,
+      name: profile.name,
+      username: profile.username ?? '',
+      email: profile.email ?? '',
+    });
+    dispatch(setUser(user));
+    return user;
+  }, [fetchProfile, dispatch]);
+
+  return { hydrateUser, isLoading };
 };
 
 /**
- * Register use case.
+ * Login use case — authenticate and store user in Redux.
  */
-export const registerUser = async (data: RegisterRequest): Promise<User> => {
-  const response = await authApi.register(data);
-  return mapUserDtoToUser(response.user);
+export const usePersistLogin = () => {
+  const [loginMutation, { isLoading }] = useLoginMutation();
+  const dispatch = useAppDispatch();
+
+  const login = useCallback(async (credentials: LoginRequest) => {
+    const response = await loginMutation(credentials).unwrap();
+    const user = mapUserDtoToUser(response.user);
+    dispatch(setUser(user));
+    return user;
+  }, [loginMutation, dispatch]);
+
+  return { login, isLoading };
 };
 
 /**
- * Logout use case.
+ * Register use case — create account and store user in Redux.
  */
-export const logoutUser = async (): Promise<void> => {
-  try {
-    await authApi.logout();
-  } catch {
-    // Even if server call fails, caller should still clear local state
-  }
+export const usePersistRegister = () => {
+  const [registerMutation, { isLoading }] = useRegisterMutation();
+  const dispatch = useAppDispatch();
+
+  const register = useCallback(async (data: RegisterRequest) => {
+    const response = await registerMutation(data).unwrap();
+    const user = mapUserDtoToUser(response.user);
+    dispatch(setUser(user));
+    return user;
+  }, [registerMutation, dispatch]);
+
+  return { register, isLoading };
+};
+
+/**
+ * Logout use case — clear auth state.
+ */
+export const usePersistLogout = () => {
+  const [logoutMutation] = useLogoutMutation();
+  const dispatch = useAppDispatch();
+
+  const logout = useCallback(async () => {
+    try {
+      await logoutMutation().unwrap();
+    } catch {
+      // Even if server call fails, clear local state
+    }
+    dispatch(clearAuth());
+  }, [logoutMutation, dispatch]);
+
+  return { logout };
 };

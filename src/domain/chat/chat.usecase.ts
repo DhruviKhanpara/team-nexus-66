@@ -1,14 +1,15 @@
 /**
- * Chat use cases — framework-agnostic where possible.
+ * Chat use case hooks — service layer.
  *
- * For local/optimistic operations (mock data), these still accept dispatch
- * since there's no real API yet. When the real API is connected, these will
- * call chatApi instead and return data for the component to dispatch.
+ * useHydrateX → fetch + store data
+ * usePersistX → create/update/delete operations
  *
- * Navigation use cases are kept here as thin orchestrators.
+ * For local/optimistic operations (mock data phase), some hooks
+ * dispatch directly. When APIs are connected, they'll use RTK Query.
  */
 
-import type { AppDispatch } from '@/app/store';
+import { useCallback } from 'react';
+import { useAppDispatch, useAppSelector } from '@/app/store';
 import type { ChatContext } from '@/types/ui';
 import {
   addMessage, addThreadReply, toggleReaction,
@@ -19,102 +20,116 @@ import { createLocalMessage } from './chat.mapper';
 import type { NavSection } from '@/types/ui';
 
 /**
- * Send a message to a channel or conversation.
- * (Optimistic — works against local Redux state with mock data)
+ * Send a message (optimistic — works against local Redux state with mock data).
  */
-export const sendMessage = (
-  content: string,
-  senderId: string,
-  context: ChatContext | null,
-  dispatch: AppDispatch,
-  threadId?: string,
-): boolean => {
-  if (!content.trim() || !context || !senderId) return false;
+export const usePersistMessage = () => {
+  const dispatch = useAppDispatch();
+  const activeChatContext = useAppSelector(s => s.ui.activeChatContext);
+  const currentUser = useAppSelector(s => s.auth.user);
 
-  const message = createLocalMessage(content.trim(), senderId, context, threadId);
+  const sendMessage = useCallback((content: string, threadId?: string) => {
+    if (!content.trim() || !activeChatContext || !currentUser) return false;
 
-  if (threadId) {
-    dispatch(addThreadReply({ threadId, message }));
-  } else {
-    dispatch(addMessage({ contextId: context.id, message }));
-  }
+    const message = createLocalMessage(content.trim(), currentUser._id, activeChatContext, threadId);
 
-  return true;
+    if (threadId) {
+      dispatch(addThreadReply({ threadId, message }));
+    } else {
+      dispatch(addMessage({ contextId: activeChatContext.id, message }));
+    }
+
+    return true;
+  }, [dispatch, activeChatContext, currentUser]);
+
+  return { sendMessage };
 };
 
 /**
- * Navigate to a specific chat context (channel or conversation).
+ * Navigate to a specific chat context.
  */
-export const navigateToChat = (
-  type: 'channel' | 'conversation',
-  id: string,
-  dispatch: AppDispatch,
-) => {
-  const navSection: NavSection = type === 'channel' ? 'teams' : 'chat';
-  dispatch(setActiveChatContext({ type, id }));
-  dispatch(setActiveNav(navSection));
+export const useNavigateChat = () => {
+  const dispatch = useAppDispatch();
+
+  const navigateToChat = useCallback((type: 'channel' | 'conversation', id: string) => {
+    const navSection: NavSection = type === 'channel' ? 'teams' : 'chat';
+    dispatch(setActiveChatContext({ type, id }));
+    dispatch(setActiveNav(navSection));
+  }, [dispatch]);
+
+  return { navigateToChat };
 };
 
 /**
- * Open a message thread.
+ * Thread management.
  */
-export const openThread = (messageId: string, dispatch: AppDispatch) => {
-  dispatch(setActiveThread(messageId));
-};
+export const useThread = () => {
+  const dispatch = useAppDispatch();
 
-/**
- * Close the active thread.
- */
-export const closeThread = (dispatch: AppDispatch) => {
-  dispatch(setActiveThread(null));
+  const openThread = useCallback((messageId: string) => {
+    dispatch(setActiveThread(messageId));
+  }, [dispatch]);
+
+  const closeThread = useCallback(() => {
+    dispatch(setActiveThread(null));
+  }, [dispatch]);
+
+  return { openThread, closeThread };
 };
 
 /**
  * Toggle an emoji reaction on a message.
  */
-export const toggleMessageReaction = (
-  contextId: string,
-  messageId: string,
-  emoji: string,
-  userId: string,
-  dispatch: AppDispatch,
-) => {
-  dispatch(toggleReaction({ contextId, messageId, emoji, userId }));
+export const usePersistReaction = () => {
+  const dispatch = useAppDispatch();
+  const currentUser = useAppSelector(s => s.auth.user);
+
+  const toggleMessageReaction = useCallback((contextId: string, messageId: string, emoji: string) => {
+    if (!currentUser) return;
+    dispatch(toggleReaction({ contextId, messageId, emoji, userId: currentUser._id }));
+  }, [dispatch, currentUser]);
+
+  return { toggleMessageReaction };
 };
 
 /**
- * Soft-delete a message.
+ * Delete a message.
  */
-export const deleteMessage = (
-  contextId: string,
-  messageId: string,
-  userId: string,
-  dispatch: AppDispatch,
-) => {
-  dispatch(softDeleteMessage({ contextId, messageId, userId }));
+export const usePersistDeleteMessage = () => {
+  const dispatch = useAppDispatch();
+  const currentUser = useAppSelector(s => s.auth.user);
+
+  const deleteMessage = useCallback((contextId: string, messageId: string) => {
+    if (!currentUser) return;
+    dispatch(softDeleteMessage({ contextId, messageId, userId: currentUser._id }));
+  }, [dispatch, currentUser]);
+
+  return { deleteMessage };
 };
 
 /**
- * Edit a message's content.
+ * Edit a message.
  */
-export const editMessage = (
-  contextId: string,
-  messageId: string,
-  content: string,
-  dispatch: AppDispatch,
-) => {
-  if (!content.trim()) return false;
-  dispatch(editMessageAction({ contextId, messageId, content: content.trim() }));
-  return true;
+export const usePersistEditMessage = () => {
+  const dispatch = useAppDispatch();
+
+  const editMessage = useCallback((contextId: string, messageId: string, content: string) => {
+    if (!content.trim()) return false;
+    dispatch(editMessageAction({ contextId, messageId, content: content.trim() }));
+    return true;
+  }, [dispatch]);
+
+  return { editMessage };
 };
 
 /**
  * Mark a channel or conversation as read.
  */
-export const markAsRead = (
-  type: 'channel' | 'conversation',
-  id: string,
-  dispatch: AppDispatch,
-) => {
-  dispatch(markContextAsRead({ type, id }));
+export const usePersistMarkAsRead = () => {
+  const dispatch = useAppDispatch();
+
+  const markAsRead = useCallback((type: 'channel' | 'conversation', id: string) => {
+    dispatch(markContextAsRead({ type, id }));
+  }, [dispatch]);
+
+  return { markAsRead };
 };
