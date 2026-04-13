@@ -130,3 +130,36 @@ export interface PinnedMessage {
   message?: Message;
   pinner?: User;
 }
+
+// ── View Models (used by domain layer) ─────────────────────────────────
+
+/** View model for a message with resolved sender info */
+export interface MessageViewModel extends Message {
+  senderName: string;
+  senderInitials: string;
+  isOwn: boolean;
+  formattedTime: string;
+  isDeleted: boolean;
+}
+
+/** View model for a notification with resolved actor info */
+export interface NotificationViewModel extends Notification {
+  actorName: string;
+  actorInitials: string;
+  timeAgo: string;
+  icon: string;
+}
+
+/** Payload for sending a new message */
+export interface SendMessageInput {
+  content: string;
+  contextType: 'channel' | 'conversation';
+  contextId: string;
+  threadId?: string;
+}
+
+/** Group of messages under a date heading */
+export interface DateGroup {
+  date: string;
+  messages: Message[];
+}

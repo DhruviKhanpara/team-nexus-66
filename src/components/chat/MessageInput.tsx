@@ -1,14 +1,12 @@
 /**
  * MessageInput — chat text input with formatting toolbar.
  *
- * Uses the sendMessage use case from the chat domain instead of
- * directly dispatching Redux actions.
+ * Uses usePersistMessage use case hook.
  */
 
 import { useState, useRef, useCallback } from 'react';
-import { useAppSelector, useAppDispatch } from '@/app/store';
 import { Send, Paperclip, SmilePlus, AtSign, Bold, Italic, Code } from 'lucide-react';
-import { sendMessage } from '@/domain/chat';
+import { usePersistMessage } from '@/domain/chat';
 
 interface MessageInputProps {
   threadId?: string;
@@ -16,22 +14,12 @@ interface MessageInputProps {
 }
 
 const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
-  const { activeChatContext } = useAppSelector(s => s.ui);
-  const currentUser = useAppSelector(s => s.auth.user);
-  const dispatch = useAppDispatch();
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { sendMessage } = usePersistMessage();
 
   const handleSend = useCallback(() => {
-    if (!currentUser || !activeChatContext) return;
-
-    const success = sendMessage(
-      content,
-      currentUser._id,
-      activeChatContext,
-      dispatch,
-      threadId,
-    );
+    const success = sendMessage(content, threadId);
 
     if (success) {
       setContent('');
@@ -40,7 +28,7 @@ const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
         textareaRef.current.style.height = 'auto';
       }
     }
-  }, [content, currentUser, activeChatContext, threadId, dispatch, onSend]);
+  }, [content, threadId, sendMessage, onSend]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -59,7 +47,6 @@ const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
   return (
     <div className="px-4 md:px-6 pb-4 pt-2">
       <div className="border border-border rounded-lg bg-card overflow-hidden focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/50 transition-all">
-        {/* Formatting toolbar */}
         <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-border">
           <button className="p-1.5 rounded hover:bg-accent transition-colors">
             <Bold className="w-4 h-4 text-muted-foreground" />
@@ -79,7 +66,6 @@ const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
           </button>
         </div>
 
-        {/* Text area */}
         <div className="flex items-end gap-2 px-3 py-2">
           <textarea
             ref={textareaRef}

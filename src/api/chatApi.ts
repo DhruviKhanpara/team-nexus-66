@@ -1,117 +1,210 @@
 /**
- * Chat API — plain HTTP functions.
- *
- * No hooks, no Redux, no RTK Query.
- * Each function calls apiClient and returns typed data.
+ * Chat API endpoints — RTK Query.
  */
 
-import { apiClient } from './baseApi';
+import { baseApi } from './baseApi';
 import type {
-  Team, Channel, Conversation, Message, ReadState,
-  Notification, PinnedMessage, UserStatus, Membership,
-  Organization, FileAttachment,
+  Organization, Team, Channel, Conversation,
+  Message, ReadState, Notification, PinnedMessage,
+  UserStatus, Membership, FileAttachment,
 } from '@/types';
 
-export const chatApi = {
-  // ── Organizations ──────────────────────────────────────────────────
-  getOrganizations: () =>
-    apiClient<Organization[]>('/organizations'),
+export const chatApi = baseApi.injectEndpoints({
+  endpoints: (build) => ({
+    // ── Organizations ─────────────────────────────────────
+    getOrganizations: build.query<Organization[], void>({
+      query: () => '/organizations',
+      providesTags: ['Organizations'],
+    }),
 
-  // ── Teams ──────────────────────────────────────────────────────────
-  getTeams: (orgId: string) =>
-    apiClient<Team[]>(`/organizations/${orgId}/teams`),
+    // ── Teams ─────────────────────────────────────────────
+    getTeams: build.query<Team[], string>({
+      query: (orgId) => `/organizations/${orgId}/teams`,
+      providesTags: ['Teams'],
+    }),
 
-  createTeam: (orgId: string, data: Partial<Team>) =>
-    apiClient<Team>(`/organizations/${orgId}/teams`, { method: 'POST', body: data }),
+    createTeam: build.mutation<Team, { orgId: string; data: Partial<Team> }>({
+      query: ({ orgId, data }) => ({ url: `/organizations/${orgId}/teams`, method: 'POST', body: data }),
+      invalidatesTags: ['Teams'],
+    }),
 
-  // ── Channels ───────────────────────────────────────────────────────
-  getChannels: (teamId: string) =>
-    apiClient<Channel[]>(`/teams/${teamId}/channels`),
+    // ── Channels ──────────────────────────────────────────
+    getChannels: build.query<Channel[], string>({
+      query: (teamId) => `/teams/${teamId}/channels`,
+      providesTags: ['Channels'],
+    }),
 
-  createChannel: (teamId: string, data: Partial<Channel>) =>
-    apiClient<Channel>(`/teams/${teamId}/channels`, { method: 'POST', body: data }),
+    createChannel: build.mutation<Channel, { teamId: string; data: Partial<Channel> }>({
+      query: ({ teamId, data }) => ({ url: `/teams/${teamId}/channels`, method: 'POST', body: data }),
+      invalidatesTags: ['Channels'],
+    }),
 
-  // ── Conversations ──────────────────────────────────────────────────
-  getConversations: (orgId: string) =>
-    apiClient<Conversation[]>(`/organizations/${orgId}/conversations`),
+    // ── Conversations ─────────────────────────────────────
+    getConversations: build.query<Conversation[], string>({
+      query: (orgId) => `/organizations/${orgId}/conversations`,
+      providesTags: ['Conversations'],
+    }),
 
-  createConversation: (data: Partial<Conversation>) =>
-    apiClient<Conversation>('/conversations', { method: 'POST', body: data }),
+    createConversation: build.mutation<Conversation, Partial<Conversation>>({
+      query: (body) => ({ url: '/conversations', method: 'POST', body }),
+      invalidatesTags: ['Conversations'],
+    }),
 
-  // ── Messages ───────────────────────────────────────────────────────
-  getMessages: (type: 'channel' | 'conversation', id: string, before?: string) =>
-    apiClient<Message[]>(
-      `/${type === 'channel' ? 'channels' : 'conversations'}/${id}/messages${before ? `?before=${before}` : ''}`,
-    ),
+    // ── Messages ──────────────────────────────────────────
+    getMessages: build.query<Message[], { type: 'channel' | 'conversation'; id: string; before?: string }>({
+      query: ({ type, id, before }) => {
+        const base = type === 'channel' ? 'channels' : 'conversations';
+        return `/${base}/${id}/messages${before ? `?before=${before}` : ''}`;
+      },
+      providesTags: (result, _err, { id }) =>
+        result
+          ? [...result.map((m) => ({ type: 'Messages' as const, id: m._id })), { type: 'Messages', id }]
+          : [{ type: 'Messages', id }],
+    }),
 
-  sendMessage: (type: 'channel' | 'conversation', id: string, data: FormData | object) =>
-    apiClient<Message>(
-      `/${type === 'channel' ? 'channels' : 'conversations'}/${id}/messages`,
-      { method: 'POST', body: data },
-    ),
+    sendMessage: build.mutation<Message, { type: 'channel' | 'conversation'; id: string; body: FormData | object }>({
+      query: ({ type, id, body }) => ({
+        url: `/${type === 'channel' ? 'channels' : 'conversations'}/${id}/messages`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_res, _err, { id }) => [{ type: 'Messages', id }],
+    }),
 
-  editMessage: (messageId: string, content: string) =>
-    apiClient<Message>(`/messages/${messageId}`, { method: 'PATCH', body: { content } }),
+    editMessage: build.mutation<Message, { messageId: string; content: string }>({
+      query: ({ messageId, content }) => ({ url: `/messages/${messageId}`, method: 'PATCH', body: { content } }),
+      invalidatesTags: ['Messages'],
+    }),
 
-  deleteMessage: (messageId: string) =>
-    apiClient<void>(`/messages/${messageId}`, { method: 'DELETE' }),
+    deleteMessage: build.mutation<void, string>({
+      query: (messageId) => ({ url: `/messages/${messageId}`, method: 'DELETE' }),
+      invalidatesTags: ['Messages'],
+    }),
 
-  addReaction: (messageId: string, emoji: string) =>
-    apiClient<Message>(`/messages/${messageId}/reactions`, { method: 'POST', body: { emoji } }),
+    addReaction: build.mutation<Message, { messageId: string; emoji: string }>({
+      query: ({ messageId, emoji }) => ({ url: `/messages/${messageId}/reactions`, method: 'POST', body: { emoji } }),
+      invalidatesTags: ['Messages'],
+    }),
 
-  removeReaction: (messageId: string, emoji: string) =>
-    apiClient<Message>(`/messages/${messageId}/reactions`, { method: 'DELETE', body: { emoji } }),
+    removeReaction: build.mutation<Message, { messageId: string; emoji: string }>({
+      query: ({ messageId, emoji }) => ({ url: `/messages/${messageId}/reactions`, method: 'DELETE', body: { emoji } }),
+      invalidatesTags: ['Messages'],
+    }),
 
-  // ── Threads ────────────────────────────────────────────────────────
-  getThreadMessages: (threadId: string) =>
-    apiClient<Message[]>(`/messages/${threadId}/thread`),
+    // ── Threads ───────────────────────────────────────────
+    getThreadMessages: build.query<Message[], string>({
+      query: (threadId) => `/messages/${threadId}/thread`,
+      providesTags: (result, _err, threadId) =>
+        result
+          ? [...result.map((m) => ({ type: 'ThreadMessages' as const, id: m._id })), { type: 'ThreadMessages', id: threadId }]
+          : [{ type: 'ThreadMessages', id: threadId }],
+    }),
 
-  replyToThread: (threadId: string, data: FormData | object) =>
-    apiClient<Message>(`/messages/${threadId}/thread`, { method: 'POST', body: data }),
+    replyToThread: build.mutation<Message, { threadId: string; body: FormData | object }>({
+      query: ({ threadId, body }) => ({ url: `/messages/${threadId}/thread`, method: 'POST', body }),
+      invalidatesTags: (_res, _err, { threadId }) => [{ type: 'ThreadMessages', id: threadId }, 'Messages'],
+    }),
 
-  // ── Read State ─────────────────────────────────────────────────────
-  getReadStates: () =>
-    apiClient<ReadState[]>('/read-states'),
+    // ── Read States ───────────────────────────────────────
+    getReadStates: build.query<ReadState[], void>({
+      query: () => '/read-states',
+      providesTags: ['ReadStates'],
+    }),
 
-  markAsRead: (type: 'channel' | 'conversation', id: string) =>
-    apiClient<ReadState>(`/read-states/${type}/${id}/read`, { method: 'POST' }),
+    markAsRead: build.mutation<ReadState, { type: 'channel' | 'conversation'; id: string }>({
+      query: ({ type, id }) => ({ url: `/read-states/${type}/${id}/read`, method: 'POST' }),
+      invalidatesTags: ['ReadStates'],
+    }),
 
-  // ── Notifications ──────────────────────────────────────────────────
-  getNotifications: () =>
-    apiClient<Notification[]>('/notifications'),
+    // ── Notifications ─────────────────────────────────────
+    getNotifications: build.query<Notification[], void>({
+      query: () => '/notifications',
+      providesTags: ['Notifications'],
+    }),
 
-  markNotificationRead: (id: string) =>
-    apiClient<void>(`/notifications/${id}/read`, { method: 'POST' }),
+    markNotificationRead: build.mutation<void, string>({
+      query: (id) => ({ url: `/notifications/${id}/read`, method: 'POST' }),
+      invalidatesTags: ['Notifications'],
+    }),
 
-  markAllNotificationsRead: () =>
-    apiClient<void>('/notifications/read-all', { method: 'POST' }),
+    markAllNotificationsRead: build.mutation<void, void>({
+      query: () => ({ url: '/notifications/read-all', method: 'POST' }),
+      invalidatesTags: ['Notifications'],
+    }),
 
-  // ── Pinned Messages ────────────────────────────────────────────────
-  getPinnedMessages: (type: 'channel' | 'conversation', id: string) =>
-    apiClient<PinnedMessage[]>(`/${type === 'channel' ? 'channels' : 'conversations'}/${id}/pinned`),
+    // ── Pinned Messages ───────────────────────────────────
+    getPinnedMessages: build.query<PinnedMessage[], { type: 'channel' | 'conversation'; id: string }>({
+      query: ({ type, id }) => `/${type === 'channel' ? 'channels' : 'conversations'}/${id}/pinned`,
+    }),
 
-  pinMessage: (messageId: string) =>
-    apiClient<PinnedMessage>(`/messages/${messageId}/pin`, { method: 'POST' }),
+    pinMessage: build.mutation<PinnedMessage, string>({
+      query: (messageId) => ({ url: `/messages/${messageId}/pin`, method: 'POST' }),
+    }),
 
-  unpinMessage: (pinId: string) =>
-    apiClient<void>(`/pinned/${pinId}`, { method: 'DELETE' }),
+    unpinMessage: build.mutation<void, string>({
+      query: (pinId) => ({ url: `/pinned/${pinId}`, method: 'DELETE' }),
+    }),
 
-  // ── User Status ────────────────────────────────────────────────────
-  getUserStatuses: (userIds: string[]) =>
-    apiClient<UserStatus[]>(`/user-statuses?userIds=${userIds.join(',')}`),
+    // ── User Status ───────────────────────────────────────
+    getUserStatuses: build.query<UserStatus[], string[]>({
+      query: (userIds) => `/user-statuses?userIds=${userIds.join(',')}`,
+    }),
 
-  updateMyStatus: (data: Partial<UserStatus>) =>
-    apiClient<UserStatus>('/user-statuses/me', { method: 'PATCH', body: data }),
+    updateMyStatus: build.mutation<UserStatus, Partial<UserStatus>>({
+      query: (body) => ({ url: '/user-statuses/me', method: 'PATCH', body }),
+    }),
 
-  // ── Members ────────────────────────────────────────────────────────
-  getMembers: (scope: string, id: string) =>
-    apiClient<Membership[]>(`/${scope}s/${id}/members`),
+    // ── Members ───────────────────────────────────────────
+    getMembers: build.query<Membership[], { scope: string; id: string }>({
+      query: ({ scope, id }) => `/${scope}s/${id}/members`,
+      providesTags: ['Members'],
+    }),
 
-  // ── Files ──────────────────────────────────────────────────────────
-  getFiles: (type: 'channel' | 'conversation', id: string) =>
-    apiClient<FileAttachment[]>(`/${type === 'channel' ? 'channels' : 'conversations'}/${id}/files`),
+    // ── Files ─────────────────────────────────────────────
+    getFiles: build.query<FileAttachment[], { type: 'channel' | 'conversation'; id: string }>({
+      query: ({ type, id }) => `/${type === 'channel' ? 'channels' : 'conversations'}/${id}/files`,
+    }),
 
-  // ── Search ─────────────────────────────────────────────────────────
-  searchMessages: (orgId: string, query: string) =>
-    apiClient<Message[]>(`/organizations/${orgId}/search?q=${encodeURIComponent(query)}`),
-};
+    // ── Search ────────────────────────────────────────────
+    searchMessages: build.query<Message[], { orgId: string; query: string }>({
+      query: ({ orgId, query }) => `/organizations/${orgId}/search?q=${encodeURIComponent(query)}`,
+    }),
+  }),
+});
+
+export const {
+  useGetOrganizationsQuery,
+  useLazyGetOrganizationsQuery,
+  useGetTeamsQuery,
+  useLazyGetTeamsQuery,
+  useCreateTeamMutation,
+  useGetChannelsQuery,
+  useLazyGetChannelsQuery,
+  useCreateChannelMutation,
+  useGetConversationsQuery,
+  useLazyGetConversationsQuery,
+  useCreateConversationMutation,
+  useGetMessagesQuery,
+  useLazyGetMessagesQuery,
+  useSendMessageMutation,
+  useEditMessageMutation,
+  useDeleteMessageMutation,
+  useAddReactionMutation,
+  useRemoveReactionMutation,
+  useGetThreadMessagesQuery,
+  useLazyGetThreadMessagesQuery,
+  useReplyToThreadMutation,
+  useGetReadStatesQuery,
+  useMarkAsReadMutation,
+  useGetNotificationsQuery,
+  useMarkNotificationReadMutation,
+  useMarkAllNotificationsReadMutation,
+  useGetPinnedMessagesQuery,
+  usePinMessageMutation,
+  useUnpinMessageMutation,
+  useGetUserStatusesQuery,
+  useUpdateMyStatusMutation,
+  useGetMembersQuery,
+  useGetFilesQuery,
+  useLazySearchMessagesQuery,
+} = chatApi;

@@ -1,8 +1,6 @@
 /**
  * Auth validation schemas (Zod).
- *
- * All auth input validation is centralized here.
- * Used by forms and components — NOT by use cases.
+ * Used by forms with react-hook-form — NOT by use cases.
  */
 
 import { z } from 'zod';

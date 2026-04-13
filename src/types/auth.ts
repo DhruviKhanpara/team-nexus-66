@@ -1,15 +1,9 @@
 /**
- * Auth domain types.
- *
- * Separates:
- *  - DTOs: shapes coming from / going to the server
- *  - View Models: shapes consumed by UI components
- *  - Request types: payloads for API calls
+ * Auth types — DTOs, request types, view models.
  */
 
 // ── DTOs (match backend response shapes exactly) ───────────────────────
 
-/** User shape returned by login/register endpoints */
 export interface UserDto {
   _id: string;
   name: string;
@@ -17,7 +11,6 @@ export interface UserDto {
   email: string;
 }
 
-/** User profile shape returned by GET /users/profile/me */
 export interface UserProfileDto {
   _id: string;
   name: string;
@@ -29,12 +22,10 @@ export interface UserProfileDto {
   createdAt?: string;
 }
 
-/** Login endpoint result (after envelope unwrap) */
 export interface LoginResponseDto {
   user: UserDto;
 }
 
-/** Register endpoint result (after envelope unwrap) */
 export interface RegisterResponseDto {
   user: UserDto;
   org?: {
@@ -47,7 +38,7 @@ export interface RegisterResponseDto {
 // ── Request types ──────────────────────────────────────────────────────
 
 export interface LoginRequest {
-  identifier: string;  // email or username
+  identifier: string;
   password: string;
 }
 
@@ -68,6 +59,5 @@ export interface UserViewModel {
   avatar: { url: string | null; publicId: string | null };
   bio: string | null;
   isEmailVerified: boolean;
-  /** Derived field: initials from name, e.g. "JD" */
   initials: string;
 }

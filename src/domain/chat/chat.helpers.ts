@@ -5,8 +5,7 @@
  * used by UI components. No API calls, no Redux.
  */
 
-import type { Message, Reaction } from '@/types/chat';
-import type { DateGroup } from './chat.types';
+import type { Message, Reaction, DateGroup } from '@/types/chat';
 
 // ── Message Grouping ───────────────────────────────────────────────────
 

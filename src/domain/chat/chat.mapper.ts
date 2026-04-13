@@ -10,9 +10,8 @@
  */
 
 import { format, formatDistanceToNow } from 'date-fns';
-import type { Message } from '@/types/chat';
+import type { Message, MessageViewModel } from '@/types/chat';
 import type { User } from '@/types/user';
-import type { MessageViewModel } from './chat.types';
 
 /** Extract initials from a name */
 const getInitials = (name: string | undefined): string =>

@@ -1,7 +1,5 @@
 /**
  * Chat validation schemas (Zod).
- *
- * All chat input validation is centralized here.
  */
 
 import { z } from 'zod';

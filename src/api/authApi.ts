@@ -1,11 +1,8 @@
 /**
- * Auth API — plain HTTP functions.
- *
- * No hooks, no Redux, no RTK Query.
- * Each function calls apiClient and returns typed data.
+ * Auth API endpoints — RTK Query.
  */
 
-import { apiClient } from './baseApi';
+import { baseApi } from './baseApi';
 import type {
   LoginRequest,
   RegisterRequest,
@@ -13,61 +10,72 @@ import type {
   RegisterResponseDto,
   UserDto,
   UserProfileDto,
-} from '@/domain/auth/auth.types';
+} from '@/types/auth';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-
-export const authApi = {
-  login: (credentials: LoginRequest) =>
-    apiClient<LoginResponseDto>('/auth/login', {
-      method: 'POST',
-      body: credentials,
+export const authApi = baseApi.injectEndpoints({
+  endpoints: (build) => ({
+    login: build.mutation<LoginResponseDto, LoginRequest>({
+      query: (body) => ({ url: '/auth/login', method: 'POST', body }),
+      invalidatesTags: ['User'],
     }),
 
-  register: (data: RegisterRequest) =>
-    apiClient<RegisterResponseDto>('/auth/register', {
-      method: 'POST',
-      body: data,
+    register: build.mutation<RegisterResponseDto, RegisterRequest>({
+      query: (body) => ({ url: '/auth/register', method: 'POST', body }),
     }),
 
-  registerWithInvite: (data: RegisterRequest & { inviteToken: string }) => {
-    const { inviteToken, ...body } = data;
-    return apiClient<RegisterResponseDto>(`/auth/register/${inviteToken}`, {
-      method: 'POST',
-      body,
-    });
-  },
-
-  logout: () =>
-    apiClient<void>('/auth/logout', { method: 'POST' }),
-
-  forgotPassword: (data: { email: string }) =>
-    apiClient<void>('/auth/forgot-password', {
-      method: 'POST',
-      body: data,
+    registerWithInvite: build.mutation<RegisterResponseDto, RegisterRequest & { inviteToken: string }>({
+      query: ({ inviteToken, ...body }) => ({
+        url: `/auth/register/${inviteToken}`,
+        method: 'POST',
+        body,
+      }),
     }),
 
-  resetPassword: (data: { email: string; otp: string; newPassword: string }) =>
-    apiClient<void>('/auth/reset-password', {
-      method: 'POST',
-      body: data,
+    logout: build.mutation<void, void>({
+      query: () => ({ url: '/auth/logout', method: 'POST' }),
+      invalidatesTags: ['User'],
     }),
 
-  getMyDetails: (checkParams: string) =>
-    apiClient<UserDto>(`/users/me/${checkParams}`),
-
-  getMyProfile: () =>
-    apiClient<UserProfileDto>('/users/profile/me'),
-
-  updateProfile: (data: { name?: string; bio?: string }) =>
-    apiClient<{ user: UserDto }>('/users/profile', {
-      method: 'PUT',
-      body: data,
+    forgotPassword: build.mutation<void, { email: string }>({
+      query: (body) => ({ url: '/auth/forgot-password', method: 'POST', body }),
     }),
 
-  updateAvatar: (data: FormData) =>
-    apiClient<{ icon: string }>('/users/profile/avatar', {
-      method: 'PUT',
-      body: data,
+    resetPassword: build.mutation<void, { email: string; otp: string; newPassword: string }>({
+      query: (body) => ({ url: '/auth/reset-password', method: 'POST', body }),
     }),
-};
+
+    getMyDetails: build.query<UserDto, string>({
+      query: (checkParams) => `/users/me/${checkParams}`,
+      providesTags: ['User'],
+    }),
+
+    getMyProfile: build.query<UserProfileDto, void>({
+      query: () => '/users/profile/me',
+      providesTags: ['User'],
+    }),
+
+    updateProfile: build.mutation<{ user: UserDto }, { name?: string; bio?: string }>({
+      query: (body) => ({ url: '/users/profile', method: 'PUT', body }),
+      invalidatesTags: ['User'],
+    }),
+
+    updateAvatar: build.mutation<{ icon: string }, FormData>({
+      query: (body) => ({ url: '/users/profile/avatar', method: 'PUT', body }),
+      invalidatesTags: ['User'],
+    }),
+  }),
+});
+
+export const {
+  useLoginMutation,
+  useRegisterMutation,
+  useLogoutMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+  useGetMyDetailsQuery,
+  useLazyGetMyDetailsQuery,
+  useGetMyProfileQuery,
+  useLazyGetMyProfileQuery,
+  useUpdateProfileMutation,
+  useUpdateAvatarMutation,
+} = authApi;
