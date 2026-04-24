@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "isolatedModules": true,
     "jsx": "react-jsx",
     "lib": [
