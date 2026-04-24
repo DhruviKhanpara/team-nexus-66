@@ -19,13 +19,12 @@ const RegisterPage = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const { register: registerUser, isLoading } = usePersistRegister();
+  const { isLoading } = usePersistRegister();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    getValues,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: '', username: '', email: '', password: '' },

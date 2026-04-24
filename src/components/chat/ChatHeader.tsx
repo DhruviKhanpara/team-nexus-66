@@ -1,5 +1,5 @@
 import { useAppSelector } from '@/app/store';
-import { channels, teams, conversations, userMap } from '@/data/mockData';
+import { channels, conversations, userMap } from '@/data/mockData';
 import { Hash, Megaphone, Lock, Users, Pin, Info } from 'lucide-react';
 import { useMemo } from 'react';
 

@@ -9,7 +9,7 @@
  *  - Pure transformation functions
  */
 
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import type { Message, MessageViewModel } from '@/types/chat';
 import type { User } from '@/types/user';
 
