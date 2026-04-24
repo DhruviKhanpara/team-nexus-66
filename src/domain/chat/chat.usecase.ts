@@ -10,7 +10,6 @@
 
 import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/store';
-import type { ChatContext } from '@/types/ui';
 import {
   addMessage, addThreadReply, toggleReaction,
   softDeleteMessage, editMessageAction, markContextAsRead,

@@ -22,7 +22,7 @@ const LoginPage = () => {
   const dispatch = useAppDispatch();
 
   // TODO: Remove mock login when backend is connected
-  const { login, isLoading } = usePersistLogin();
+  const { isLoading } = usePersistLogin();
 
   const {
     register,

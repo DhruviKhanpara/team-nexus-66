@@ -14,8 +14,9 @@ import {
   type FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react';
 import type { ApiResponse, ApiError } from './apiTypes';
+import { env } from '@/config/env';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const BASE_URL = env.API_BASE_URL || 'http://localhost:5000/api';
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: BASE_URL,
