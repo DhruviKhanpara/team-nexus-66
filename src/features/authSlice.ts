@@ -9,23 +9,22 @@
  * No token is stored in Redux state.
  */
 
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { User } from '@/types';
-import { currentUser } from '@/data/mockData';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { User } from "@/types";
+import { currentUser } from "@/data/mockData";
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
 }
 
-// For development, start authenticated with mock user
 const initialState: AuthState = {
   user: currentUser,
-  isAuthenticated: true,
+  isAuthenticated: false,
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     setUser: (state, action: PayloadAction<User>) => {

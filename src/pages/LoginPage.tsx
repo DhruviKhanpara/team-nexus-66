@@ -4,25 +4,23 @@
  * Flow: Zod validates → component calls use case → use case handles API + Redux.
  */
 
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { usePersistLogin } from '@/domain/auth';
-import { loginSchema, type LoginFormData } from '@/schemas/auth.schema';
-import { currentUser } from '@/data/mockData';
-import { useAppDispatch } from '@/app/store';
-import { setUser } from '@/features/authSlice';
-import { MessageSquare, Eye, EyeOff } from 'lucide-react';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { usePersistLogin } from "@/domain/auth";
+import { loginSchema, type LoginFormData } from "@/schemas/auth.schema";
+import { currentUser } from "@/data/mockData";
+import { useAppDispatch } from "@/app/store";
+import { setUser } from "@/features/authSlice";
+import { MessageSquare, Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
-  // TODO: Remove mock login when backend is connected
-  const { isLoading } = usePersistLogin();
+  const { login, isLoading } = usePersistLogin();
 
   const {
     register,
@@ -30,18 +28,17 @@ const LoginPage = () => {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { identifier: 'john@acmecorp.com', password: 'password' },
+    defaultValues: { identifier: "john@acmecorp.com", password: "password" },
   });
 
-  const onSubmit = async (_data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormData) => {
     setApiError(null);
     try {
-      // TODO: Replace mock with: await login(data);
-      dispatch(setUser(currentUser));
-      navigate('/');
+      await login(data);
+      navigate("/");
     } catch (err: unknown) {
       const error = err as { data?: { message?: string }; message?: string };
-      setApiError(error.data?.message || error.message || 'Login failed');
+      setApiError(error.data?.message || error.message || "Login failed");
     }
   };
 
@@ -53,7 +50,9 @@ const LoginPage = () => {
             <MessageSquare className="w-6 h-6 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to your workspace</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Sign in to your workspace
+          </p>
         </div>
 
         {apiError && (
@@ -64,39 +63,65 @@ const LoginPage = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-foreground block mb-1.5">Email</label>
+            <label className="text-sm font-medium text-foreground block mb-1.5">
+              Email
+            </label>
             <input
               type="text"
-              {...register('identifier')}
+              {...register("identifier")}
               className="w-full px-3 py-2.5 rounded-lg border border-input bg-card text-foreground text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
             />
-            {errors.identifier && <p className="text-xs text-destructive mt-1">{errors.identifier.message}</p>}
+            {errors.identifier && (
+              <p className="text-xs text-destructive mt-1">
+                {errors.identifier.message}
+              </p>
+            )}
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground block mb-1.5">Password</label>
+            <label className="text-sm font-medium text-foreground block mb-1.5">
+              Password
+            </label>
             <div className="relative">
               <input
-                type={showPassword ? 'text' : 'password'}
-                {...register('password')}
+                type={showPassword ? "text" : "password"}
+                {...register("password")}
                 className="w-full px-3 py-2.5 rounded-lg border border-input bg-card text-foreground text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 pr-10"
               />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
-                {showPassword ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <Eye className="w-4 h-4 text-muted-foreground" />
+                )}
               </button>
             </div>
-            {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
+            {errors.password && (
+              <p className="text-xs text-destructive mt-1">
+                {errors.password.message}
+              </p>
+            )}
           </div>
           <button
             type="submit"
             disabled={isLoading}
             className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {isLoading ? 'Signing in...' : 'Sign in'}
+            {isLoading ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          Don't have an account? <Link to="/register" className="text-primary hover:underline font-medium">Sign up</Link>
+          Don't have an account?{" "}
+          <Link
+            to="/register"
+            className="text-primary hover:underline font-medium"
+          >
+            Sign up
+          </Link>
         </p>
       </div>
     </div>
