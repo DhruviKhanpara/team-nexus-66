@@ -9,17 +9,22 @@
  * and dispatches results to Redux.
  */
 
-import { useCallback } from 'react';
-import { useAppDispatch } from '@/app/store';
-import { setUser, clearAuth } from '@/features/authSlice';
-import { useLoginMutation, useRegisterMutation, useLogoutMutation, useLazyGetMyProfileQuery } from '@/api/authApi';
-import { mapUserDtoToUser } from './auth.mapper';
-import type { LoginRequest, RegisterRequest } from '@/types/auth';
+import { useCallback } from "react";
+import { useAppDispatch } from "@/app/store";
+import { setUser, clearAuth } from "@/features/authSlice";
+import {
+  useLoginMutation,
+  useRegisterMutation,
+  useLogoutMutation,
+  useLazyGetMyProfileQuery,
+} from "@/api/authApi";
+import { mapUserDtoToUser } from "./auth.mapper";
+import type { LoginRequest, RegisterRequest } from "@/types/auth";
 
 /**
  * Hydrate current user profile into Redux.
  */
-export const useHydrateUser = () => {
+const useHydrateUser = () => {
   const [fetchProfile, { isLoading }] = useLazyGetMyProfileQuery();
   const dispatch = useAppDispatch();
 
@@ -28,8 +33,8 @@ export const useHydrateUser = () => {
     const user = mapUserDtoToUser({
       _id: profile._id,
       name: profile.name,
-      username: profile.username ?? '',
-      email: profile.email ?? '',
+      username: profile.username ?? "",
+      email: profile.email ?? "",
     });
     dispatch(setUser(user));
     return user;
@@ -41,16 +46,15 @@ export const useHydrateUser = () => {
 /**
  * Login use case — authenticate and store user in Redux.
  */
-export const usePersistLogin = () => {
+const usePersistLogin = () => {
   const [loginMutation, { isLoading }] = useLoginMutation();
-  const dispatch = useAppDispatch();
 
-  const login = useCallback(async (credentials: LoginRequest) => {
-    const response = await loginMutation(credentials).unwrap();
-    const user = mapUserDtoToUser(response.user);
-    dispatch(setUser(user));
-    return user;
-  }, [loginMutation, dispatch]);
+  const login = useCallback(
+    async (credentials: LoginRequest) => {
+      await loginMutation(credentials).unwrap();
+    },
+    [loginMutation],
+  );
 
   return { login, isLoading };
 };
@@ -58,16 +62,19 @@ export const usePersistLogin = () => {
 /**
  * Register use case — create account and store user in Redux.
  */
-export const usePersistRegister = () => {
+const usePersistRegister = () => {
   const [registerMutation, { isLoading }] = useRegisterMutation();
   const dispatch = useAppDispatch();
 
-  const register = useCallback(async (data: RegisterRequest) => {
-    const response = await registerMutation(data).unwrap();
-    const user = mapUserDtoToUser(response.user);
-    dispatch(setUser(user));
-    return user;
-  }, [registerMutation, dispatch]);
+  const register = useCallback(
+    async (data: RegisterRequest) => {
+      const response = await registerMutation(data).unwrap();
+      const user = mapUserDtoToUser(response.user);
+      dispatch(setUser(user));
+      return user;
+    },
+    [registerMutation, dispatch],
+  );
 
   return { register, isLoading };
 };
@@ -75,7 +82,7 @@ export const usePersistRegister = () => {
 /**
  * Logout use case — clear auth state.
  */
-export const usePersistLogout = () => {
+const usePersistLogout = () => {
   const [logoutMutation] = useLogoutMutation();
   const dispatch = useAppDispatch();
 
@@ -89,4 +96,11 @@ export const usePersistLogout = () => {
   }, [logoutMutation, dispatch]);
 
   return { logout };
+};
+
+export {
+  useHydrateUser,
+  usePersistLogin,
+  usePersistRegister,
+  usePersistLogout,
 };

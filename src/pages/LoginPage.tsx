@@ -1,24 +1,13 @@
-/**
- * LoginPage — react-hook-form + Zod + usePersistLogin use case.
- *
- * Flow: Zod validates → component calls use case → use case handles API + Redux.
- */
-
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistLogin } from "@/domain/auth";
 import { loginSchema, type LoginFormData } from "@/schemas/auth.schema";
-import { currentUser } from "@/data/mockData";
-import { useAppDispatch } from "@/app/store";
-import { setUser } from "@/features/authSlice";
 import { MessageSquare, Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   const { login, isLoading } = usePersistLogin();
 
@@ -32,14 +21,9 @@ const LoginPage = () => {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    setApiError(null);
     try {
       await login(data);
-      navigate("/");
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string }; message?: string };
-      setApiError(error.data?.message || error.message || "Login failed");
-    }
+    } catch (err) {}
   };
 
   return (
@@ -54,12 +38,6 @@ const LoginPage = () => {
             Sign in to your workspace
           </p>
         </div>
-
-        {apiError && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-            {apiError}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
