@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistLogin } from "@/domain/auth";
 import { loginSchema, type LoginFormData } from "@/schemas/auth.schema";
 import { MessageSquare, Eye, EyeOff } from "lucide-react";
+import { useAppSelector } from "@/app/store";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
 
   const { login, isLoading } = usePersistLogin();
 
@@ -39,7 +41,7 @@ const LoginPage = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form className="space-y-4">
           <div>
             <label className="text-sm font-medium text-foreground block mb-1.5">
               Email
@@ -86,9 +88,18 @@ const LoginPage = () => {
           <button
             type="submit"
             disabled={isLoading}
+            onClick={handleSubmit(onSubmit)}
             className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {isLoading ? "Signing in..." : "Sign in"}
+          </button>
+          <button
+            onClick={() => {
+              console.log(isAuthenticated);
+              //   Navigate({ to: "/" });
+            }}
+          >
+            go to home
           </button>
         </form>
 

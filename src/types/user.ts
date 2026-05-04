@@ -1,3 +1,10 @@
+export interface MyDetailDTO {
+  id: string;
+  email: string;
+  name: string;
+  iconUrl: string;
+}
+
 export interface User {
   _id: string;
   name: string;
@@ -8,8 +15,14 @@ export interface User {
   updatedAt: string;
 }
 
-export type Presence = 'online' | 'offline' | 'away';
-export type UserStatusType = 'active' | 'busy' | 'do_not_disturb' | 'be_right_back' | 'appear_away' | 'appear_offline';
+export type Presence = "online" | "offline" | "away";
+export type UserStatusType =
+  | "active"
+  | "busy"
+  | "do_not_disturb"
+  | "be_right_back"
+  | "appear_away"
+  | "appear_offline";
 
 export interface UserStatus {
   _id: string;
@@ -19,4 +32,12 @@ export interface UserStatus {
   statusMessage: string | null;
   lastSeenAt: string | null;
   activeSocketId: string | null;
+}
+
+//#region Value Objects
+export interface MyDetailVO {
+  id: string;
+  email: string;
+  name: string;
+  iconUrl: string;
 }

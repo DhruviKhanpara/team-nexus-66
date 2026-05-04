@@ -4,13 +4,6 @@
 
 // ── DTOs (match backend response shapes exactly) ───────────────────────
 
-export interface UserDto {
-  _id: string;
-  name: string;
-  username: string;
-  email: string;
-}
-
 export interface UserProfileDto {
   _id: string;
   name: string;

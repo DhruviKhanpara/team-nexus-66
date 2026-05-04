@@ -24,24 +24,25 @@ import type { LoginRequest, RegisterRequest } from "@/types/auth";
 /**
  * Hydrate current user profile into Redux.
  */
-const useHydrateUser = () => {
-  const [fetchProfile, { isLoading }] = useLazyGetMyProfileQuery();
-  const dispatch = useAppDispatch();
+// const useHydrateUser = () => {
+//   console.log("useHydrateUser called");
+//   const [fetchProfile, { isLoading }] = useLazyGetMyProfileQuery();
+//   const dispatch = useAppDispatch();
 
-  const hydrateUser = useCallback(async () => {
-    const profile = await fetchProfile().unwrap();
-    const user = mapUserDtoToUser({
-      _id: profile._id,
-      name: profile.name,
-      username: profile.username ?? "",
-      email: profile.email ?? "",
-    });
-    dispatch(setUser(user));
-    return user;
-  }, [fetchProfile, dispatch]);
+//   const hydrateUser = useCallback(async () => {
+//     const profile = await fetchProfile().unwrap();
+//     const user = mapUserDtoToUser({
+//       _id: profile._id,
+//       name: profile.name,
+//       username: profile.username ?? "",
+//       email: profile.email ?? "",
+//     });
+//     dispatch(setUser(user));
+//     return user;
+//   }, [fetchProfile, dispatch]);
 
-  return { hydrateUser, isLoading };
-};
+//   return { hydrateUser, isLoading };
+// };
 
 /**
  * Login use case — authenticate and store user in Redux.
@@ -99,7 +100,7 @@ const usePersistLogout = () => {
 };
 
 export {
-  useHydrateUser,
+  //   useHydrateUser,
   usePersistLogin,
   usePersistRegister,
   usePersistLogout,
