@@ -4,8 +4,10 @@ import { setUser } from "@/features/authSlice";
 import { useCallback, useEffect } from "react";
 import { mapUserDtoToUserVO } from "./user.mapper";
 
-const useHydrateMe = () => {
-  const { data: user, isLoading } = useGetMyDetailsQuery();
+const useHydrateMe = (isAuthPage: boolean) => {
+  const { data: user, isLoading } = useGetMyDetailsQuery(undefined, {
+    skip: isAuthPage,
+  });
   const dispatch = useAppDispatch();
 
   useEffect(() => {
@@ -15,7 +17,7 @@ const useHydrateMe = () => {
     }
   }, [user, dispatch]);
 
-  return { isLoading };
+  return { isLoading, user };
 };
 
 export { useHydrateMe };

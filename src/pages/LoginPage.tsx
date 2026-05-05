@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistLogin } from "@/domain/auth";
@@ -10,6 +10,8 @@ import { useAppSelector } from "@/app/store";
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
+
+  const navigate = useNavigate();
 
   const { login, isLoading } = usePersistLogin();
 
@@ -27,6 +29,10 @@ const LoginPage = () => {
       await login(data);
     } catch (err) {}
   };
+
+  useEffect(() => {
+    isAuthenticated && navigate("/");
+  }, [isAuthenticated]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -94,12 +100,24 @@ const LoginPage = () => {
             {isLoading ? "Signing in..." : "Sign in"}
           </button>
           <button
+            type="button"
             onClick={() => {
               console.log(isAuthenticated);
               //   Navigate({ to: "/" });
             }}
+            className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             go to home
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              console.log(isAuthenticated);
+              navigate("/");
+            }}
+            className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            navigate
           </button>
         </form>
 
