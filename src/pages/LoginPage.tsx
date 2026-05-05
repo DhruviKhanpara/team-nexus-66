@@ -1,17 +1,13 @@
-import { useEffect, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistLogin } from "@/domain/auth";
 import { loginSchema, type LoginFormData } from "@/schemas/auth.schema";
 import { MessageSquare, Eye, EyeOff } from "lucide-react";
-import { useAppSelector } from "@/app/store";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
-
-  const navigate = useNavigate();
 
   const { login, isLoading } = usePersistLogin();
 
@@ -30,10 +26,6 @@ const LoginPage = () => {
     } catch (err) {}
   };
 
-  useEffect(() => {
-    isAuthenticated && navigate("/");
-  }, [isAuthenticated]);
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
@@ -47,7 +39,7 @@ const LoginPage = () => {
           </p>
         </div>
 
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div>
             <label className="text-sm font-medium text-foreground block mb-1.5">
               Email
@@ -94,30 +86,9 @@ const LoginPage = () => {
           <button
             type="submit"
             disabled={isLoading}
-            onClick={handleSubmit(onSubmit)}
             className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {isLoading ? "Signing in..." : "Sign in"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              console.log(isAuthenticated);
-              //   Navigate({ to: "/" });
-            }}
-            className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            go to home
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              console.log(isAuthenticated);
-              navigate("/");
-            }}
-            className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            navigate
           </button>
         </form>
 

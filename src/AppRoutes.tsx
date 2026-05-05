@@ -3,32 +3,51 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AppLayout from "./components/layout/AppLayout";
 import NotFound from "./pages/NotFound";
+import { useHydrateMe } from "./domain/user/user.usecase";
 
-const ProtectedRoute = ({
-  children,
-  isAuthenticated,
-}: {
-  children: React.ReactNode;
-  isAuthenticated: boolean;
-}) => {
-  if (!isAuthenticated) {
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useHydrateMe();
+
+  if (isLoading) {
+    return <div>Calling me endpoint - test</div>;
+  }
+
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
 };
 
-const AllRoutes = ({ isAuthenticated }: { isAuthenticated: boolean }) => (
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useHydrateMe();
+
+  if (isLoading) {
+    return <div>Calling me endpoint - test</div>;
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AppRoutes = () => (
   <Routes>
     <Route
       path="/login"
-      element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
+      element={
+        <PublicRoute>
+          <LoginPage />
+        </PublicRoute>
+      }
     />
     <Route path="/register" element={<RegisterPage />} />
     <Route
       path="/"
       element={
-        <ProtectedRoute isAuthenticated={isAuthenticated}>
+        <ProtectedRoute>
           <AppLayout />
         </ProtectedRoute>
       }
@@ -37,4 +56,4 @@ const AllRoutes = ({ isAuthenticated }: { isAuthenticated: boolean }) => (
   </Routes>
 );
 
-export default AllRoutes;
+export default AppRoutes;
