@@ -16,10 +16,10 @@ import {
   useLoginMutation,
   useRegisterMutation,
   useLogoutMutation,
-  useLazyGetMyProfileQuery,
 } from "@/api/authApi";
 import { mapUserDtoToUser } from "./auth.mapper";
 import type { LoginRequest, RegisterRequest } from "@/types/auth";
+import { baseApi } from "@/api/baseApi";
 
 /**
  * Hydrate current user profile into Redux.
@@ -90,10 +90,10 @@ const usePersistLogout = () => {
   const logout = useCallback(async () => {
     try {
       await logoutMutation().unwrap();
-    } catch {
-      // Even if server call fails, clear local state
-    }
-    dispatch(clearAuth());
+      // reset the whole api state(cached data, tags etc) so that in <PublicRoute/> - useGetMeQuery doesn't return cached data and is refetched
+      dispatch(baseApi.util.resetApiState());
+      dispatch(clearAuth());
+    } catch {}
   }, [logoutMutation, dispatch]);
 
   return { logout };

@@ -124,6 +124,7 @@ export const baseApi = createApi({
     "ReadStates",
     "Notifications",
     "Members",
+    "Me",
   ],
   endpoints: () => ({}),
 });
