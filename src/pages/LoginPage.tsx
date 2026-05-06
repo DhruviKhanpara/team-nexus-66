@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistLogin } from "@/domain/auth";
@@ -8,6 +8,8 @@ import { MessageSquare, Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
+
+  const navigate = useNavigate();
 
   const { login, isLoading } = usePersistLogin();
 
@@ -23,6 +25,7 @@ const LoginPage = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       await login(data);
+      navigate("/", { replace: true });
     } catch (err) {}
   };
 
@@ -39,7 +42,7 @@ const LoginPage = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div>
             <label className="text-sm font-medium text-foreground block mb-1.5">
               Email

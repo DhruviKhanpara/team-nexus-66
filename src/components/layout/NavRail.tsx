@@ -1,57 +1,79 @@
-import { useCallback } from 'react';
-import {
-  Sun, Moon, Settings, LogOut, Building2, User, Shield, Palette, ChevronRight,
-} from 'lucide-react';
-import { useAppSelector, useAppDispatch } from '@/app/store';
-import { setActiveNav, toggleTheme } from '@/features/uiSlice';
-import { clearAuth } from '@/features/authSlice';
-import { useNavigate } from 'react-router-dom';
-import type { NavSection } from '@/types';
-import { notifications as mockNotifications } from '@/data/mockData';
-import { NAV_ITEMS } from '@/lib/constants';
-import { getInitials } from '@/lib/helpers';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { useAppDispatch, useAppSelector } from "@/app/store";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
-import { Users } from 'lucide-react';
+} from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { notifications as mockNotifications } from "@/data/mockData";
+import { usePersistLogout } from "@/domain/auth";
+import { setActiveNav, toggleTheme } from "@/features/uiSlice";
+import { NAV_ITEMS } from "@/lib/constants";
+import { getInitials } from "@/lib/helpers";
+import type { NavSection } from "@/types";
+import {
+  Building2,
+  ChevronRight,
+  LogOut,
+  Moon,
+  Palette,
+  Settings,
+  Shield,
+  Sun,
+  User,
+  Users,
+} from "lucide-react";
+import { useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 
 const NavRail = () => {
-  const { activeNav, theme } = useAppSelector(s => s.ui);
-  const user = useAppSelector(s => s.auth.user);
+  const { activeNav, theme } = useAppSelector((s) => s.ui);
+  const user = useAppSelector((s) => s.auth.user);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const unreadNotifCount = mockNotifications.filter(n => !n.isRead).length;
+  const { logout } = usePersistLogout();
 
-  const handleLogout = useCallback(() => {
-    dispatch(clearAuth());
-    navigate('/login');
-  }, [dispatch, navigate]);
+  const unreadNotifCount = mockNotifications.filter((n) => !n.isRead).length;
 
-  const handleNavClick = useCallback((id: NavSection) => {
-    dispatch(setActiveNav(id));
-  }, [dispatch]);
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
+
+  const handleNavClick = useCallback(
+    (id: NavSection) => {
+      dispatch(setActiveNav(id));
+    },
+    [dispatch],
+  );
 
   const handleToggleTheme = useCallback(() => {
     dispatch(toggleTheme());
   }, [dispatch]);
 
   return (
-    <nav className="h-full w-[68px] flex flex-col items-center py-3 gap-1" style={{ background: 'hsl(var(--sidebar-rail))' }}>
+    <nav
+      className="h-full w-[68px] flex flex-col items-center py-3 gap-1"
+      style={{ background: "hsl(var(--sidebar-rail))" }}
+    >
       {/* Organization logo popover */}
       <div className="mb-4 mt-1">
         <Popover>
           <PopoverTrigger asChild>
-            <button className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm cursor-pointer hover:opacity-80 transition-opacity" style={{ background: 'hsl(var(--sidebar-rail-active))', color: 'hsl(var(--primary-foreground))' }}>
+            <button
+              className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm cursor-pointer hover:opacity-80 transition-opacity"
+              style={{
+                background: "hsl(var(--sidebar-rail-active))",
+                color: "hsl(var(--primary-foreground))",
+              }}
+            >
               AC
             </button>
           </PopoverTrigger>
@@ -62,8 +84,12 @@ const NavRail = () => {
                   AC
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-foreground">Acme Corporation</h3>
-                  <p className="text-xs text-muted-foreground">acme-corp.teams.com</p>
+                  <h3 className="font-semibold text-sm text-foreground">
+                    Acme Corporation
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    acme-corp.teams.com
+                  </p>
                 </div>
               </div>
             </div>
@@ -87,8 +113,15 @@ const NavRail = () => {
             </div>
             <Separator />
             <div className="p-3">
-              <p className="text-[11px] text-muted-foreground">Plan: <span className="font-medium text-foreground">Business Premium</span></p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">12 members · 3 teams</p>
+              <p className="text-[11px] text-muted-foreground">
+                Plan:{" "}
+                <span className="font-medium text-foreground">
+                  Business Premium
+                </span>
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                12 members · 3 teams
+              </p>
             </div>
           </PopoverContent>
         </Popover>
@@ -101,12 +134,18 @@ const NavRail = () => {
             <TooltipTrigger asChild>
               <button
                 onClick={() => handleNavClick(id)}
-                className={`nav-rail-item ${activeNav === id ? 'active' : ''}`}
+                className={`nav-rail-item ${activeNav === id ? "active" : ""}`}
               >
                 <div className="relative">
                   <Icon className="w-5 h-5" />
-                  {id === 'notifications' && unreadNotifCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center" style={{ background: 'hsl(var(--unread-badge))', color: 'hsl(var(--primary-foreground))' }}>
+                  {id === "notifications" && unreadNotifCount > 0 && (
+                    <span
+                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center"
+                      style={{
+                        background: "hsl(var(--unread-badge))",
+                        color: "hsl(var(--primary-foreground))",
+                      }}
+                    >
                       {unreadNotifCount}
                     </span>
                   )}
@@ -126,11 +165,15 @@ const NavRail = () => {
         <Tooltip delayDuration={300}>
           <TooltipTrigger asChild>
             <button onClick={handleToggleTheme} className="nav-rail-item">
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+              {theme === "light" ? (
+                <Moon className="w-5 h-5" />
+              ) : (
+                <Sun className="w-5 h-5" />
+              )}
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" className="text-xs">
-            {theme === 'light' ? 'Dark mode' : 'Light mode'}
+            {theme === "light" ? "Dark mode" : "Light mode"}
           </TooltipContent>
         </Tooltip>
 
@@ -166,11 +209,20 @@ const NavRail = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold text-sm text-foreground">{user?.name || 'User'}</h3>
-                    <p className="text-xs text-muted-foreground">{user?.email || 'user@example.com'}</p>
+                    <h3 className="font-semibold text-sm text-foreground">
+                      {user?.name || "User"}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {user?.email || "user@example.com"}
+                    </p>
                     <div className="flex items-center gap-1.5 mt-1">
-                      <span className="w-2 h-2 rounded-full" style={{ background: 'hsl(var(--status-online))' }} />
-                      <span className="text-[11px] text-muted-foreground">Available</span>
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ background: "hsl(var(--status-online))" }}
+                      />
+                      <span className="text-[11px] text-muted-foreground">
+                        Available
+                      </span>
                     </div>
                   </div>
                 </div>
