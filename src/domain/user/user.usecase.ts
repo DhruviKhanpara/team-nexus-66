@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { mapUserDtoToUserVO } from "./user.mapper";
 
 const useHydrateMe = () => {
-  const { data: user, isLoading } = useGetMyDetailsQuery(undefined, {});
+  const { data: user, isFetching } = useGetMyDetailsQuery();
   const dispatch = useAppDispatch();
 
   useEffect(() => {
@@ -15,7 +15,7 @@ const useHydrateMe = () => {
     }
   }, [user, dispatch]);
 
-  return { isLoading, user };
+  return { isFetching, user };
 };
 
 export { useHydrateMe };

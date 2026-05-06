@@ -6,9 +6,9 @@ import NotFound from "./pages/NotFound";
 import { useHydrateMe } from "./domain/user/user.usecase";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useHydrateMe();
+  const { user, isFetching } = useHydrateMe();
 
-  if (isLoading) {
+  if (isFetching) {
     return <div>Calling me endpoint - test</div>;
   }
 
@@ -20,9 +20,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useHydrateMe();
-
-  if (isLoading) {
+  const { user, isFetching } = useHydrateMe();
+  if (isFetching) {
     return <div>Calling me endpoint - test</div>;
   }
 

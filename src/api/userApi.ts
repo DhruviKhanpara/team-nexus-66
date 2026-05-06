@@ -5,7 +5,7 @@ export const userApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getMyDetails: build.query<MyDetailDTO, void>({
       query: () => "/user/me",
-      //   providesTags: ["User"],
+      // providesTags: ["Me"],
     }),
   }),
 });
