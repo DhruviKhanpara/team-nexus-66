@@ -16,6 +16,9 @@ const rawBaseQuery = fetchBaseQuery({
   baseUrl: BASE_URL,
   credentials: "include", // send cookies (access + refresh tokens)
   prepareHeaders: (headers) => {
+    // to prevent ERR_NGROK_6024 error in response headers. TODO: remove when deploying
+    headers.set("ngrok-skip-browser-warning", "true");
+
     // Cookies are sent automatically; no manual token injection needed
     return headers;
   },
@@ -32,6 +35,10 @@ const refreshAccessToken = async (): Promise<boolean> => {
     const res = await fetch(`${BASE_URL}/auth/refresh`, {
       method: "POST",
       credentials: "include",
+      // to prevent ERR_NGROK_6024 error in response headers. TODO: remove when deploying
+      headers: {
+        "ngrok-skip-browser-warning": "true",
+      },
     });
     return res.ok;
   } catch {
