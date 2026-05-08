@@ -32,7 +32,7 @@ const ChatHeader = () => {
           memberCount = conv.participants.length;
           icon = <Users className="w-5 h-5 text-muted-foreground" />;
         } else {
-          const other = conv.participants.find(p => p.userId !== currentUser?._id);
+          const other = conv.participants.find(p => p.userId !== currentUser?.id);
           const otherUser = other ? userMap[other.userId] : null;
           name = otherUser?.name || 'Unknown';
         }
@@ -40,7 +40,7 @@ const ChatHeader = () => {
     }
 
     return { name, description, icon, memberCount };
-  }, [activeChatContext, currentUser?._id]);
+  }, [activeChatContext, currentUser?.id]);
 
   if (!headerData) return null;
 

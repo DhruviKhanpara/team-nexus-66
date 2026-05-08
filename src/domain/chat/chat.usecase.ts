@@ -29,7 +29,7 @@ export const usePersistMessage = () => {
   const sendMessage = useCallback((content: string, threadId?: string) => {
     if (!content.trim() || !activeChatContext || !currentUser) return false;
 
-    const message = createLocalMessage(content.trim(), currentUser._id, activeChatContext, threadId);
+    const message = createLocalMessage(content.trim(), currentUser.id, activeChatContext, threadId);
 
     if (threadId) {
       dispatch(addThreadReply({ threadId, message }));
@@ -84,7 +84,7 @@ export const usePersistReaction = () => {
 
   const toggleMessageReaction = useCallback((contextId: string, messageId: string, emoji: string) => {
     if (!currentUser) return;
-    dispatch(toggleReaction({ contextId, messageId, emoji, userId: currentUser._id }));
+    dispatch(toggleReaction({ contextId, messageId, emoji, userId: currentUser.id }));
   }, [dispatch, currentUser]);
 
   return { toggleMessageReaction };
@@ -99,7 +99,7 @@ export const usePersistDeleteMessage = () => {
 
   const deleteMessage = useCallback((contextId: string, messageId: string) => {
     if (!currentUser) return;
-    dispatch(softDeleteMessage({ contextId, messageId, userId: currentUser._id }));
+    dispatch(softDeleteMessage({ contextId, messageId, userId: currentUser.id }));
   }, [dispatch, currentUser]);
 
   return { deleteMessage };
