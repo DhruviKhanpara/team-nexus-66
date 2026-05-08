@@ -128,8 +128,13 @@ const usePersistForgotPassword = () => {
   const [forgotPasswordMutation, { isLoading }] = useForgotPasswordMutation();
 
   const forgotPassword = useCallback(
-    (vo: ForgotPasswordVO) =>
-      forgotPasswordMutation(mapForgotPasswordVOToDTO(vo)),
+    async (vo: ForgotPasswordVO) => {
+      try {
+        await forgotPasswordMutation(mapForgotPasswordVOToDTO(vo)).unwrap();
+      } catch {
+        /* errors surfaced via toasts in baseApi */
+      }
+    },
     [forgotPasswordMutation],
   );
 
@@ -143,8 +148,13 @@ const usePersistResetPassword = () => {
   const [resetPasswordMutation, { isLoading }] = useResetPasswordMutation();
 
   const resetPassword = useCallback(
-    (vo: ResetPasswordVO) =>
-      resetPasswordMutation(mapResetPasswordVOToDTO(vo)),
+    async (vo: ResetPasswordVO) => {
+      try {
+        await resetPasswordMutation(mapResetPasswordVOToDTO(vo)).unwrap();
+      } catch {
+        /* errors surfaced via toasts in baseApi */
+      }
+    },
     [resetPasswordMutation],
   );
 
@@ -158,7 +168,13 @@ const usePersistVerifyEmail = () => {
   const [verifyEmailMutation, { isLoading }] = useVerifyEmailMutation();
 
   const verifyEmail = useCallback(
-    (vo: VerifyEmailVO) => verifyEmailMutation(mapVerifyEmailVOToDTO(vo)),
+    async (vo: VerifyEmailVO) => {
+      try {
+        await verifyEmailMutation(mapVerifyEmailVOToDTO(vo)).unwrap();
+      } catch {
+        /* errors surfaced via toasts in baseApi */
+      }
+    },
     [verifyEmailMutation],
   );
 
@@ -172,10 +188,13 @@ const usePersistResendVerification = () => {
   const [resendVerificationMutation, { isLoading }] =
     useResendVerificationMutation();
 
-  const resendVerification = useCallback(
-    () => resendVerificationMutation(),
-    [resendVerificationMutation],
-  );
+  const resendVerification = useCallback(async () => {
+    try {
+      await resendVerificationMutation().unwrap();
+    } catch {
+      /* errors surfaced via toasts in baseApi */
+    }
+  }, [resendVerificationMutation]);
 
   return { resendVerification, isLoading };
 };
