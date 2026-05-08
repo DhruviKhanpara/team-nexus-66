@@ -5,10 +5,9 @@
  *  - useHydrateX → fetch + store data
  *  - usePersistX → create/update/delete operations
  *
- * Each hook wraps an RTK Query mutation, applies the VO→DTO mapper,
- * and exposes `isLoading` / `isSuccess` flags from RTK Query.
- * Errors are surfaced via the centralized toast layer in baseApi,
- * so individual hooks do not need to return success/failure booleans.
+ * Every use case awaits `.unwrap()` inside a `try/catch`. Errors are
+ * swallowed because `baseApi` toasts them centrally; consumers read
+ * `isLoading` / `isSuccess` from RTK Query for UI flow decisions.
  */
 
 import { useCallback } from "react";
