@@ -47,7 +47,13 @@ const usePersistLogin = () => {
   const [loginMutation, { isLoading, isSuccess }] = useLoginMutation();
 
   const login = useCallback(
-    (vo: LoginVO) => loginMutation(mapLoginVOToDTO(vo)),
+    async (vo: LoginVO) => {
+      try {
+        await loginMutation(mapLoginVOToDTO(vo)).unwrap();
+      } catch {
+        /* errors surfaced via toasts in baseApi */
+      }
+    },
     [loginMutation],
   );
 
