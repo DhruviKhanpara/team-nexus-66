@@ -69,7 +69,13 @@ const usePersistRegister = () => {
   const [registerMutation, { isLoading, isSuccess }] = useRegisterMutation();
 
   const register = useCallback(
-    (vo: RegisterVO) => registerMutation(mapRegisterVOToDTO(vo)),
+    async (vo: RegisterVO) => {
+      try {
+        await registerMutation(mapRegisterVOToDTO(vo)).unwrap();
+      } catch {
+        /* errors surfaced via toasts in baseApi */
+      }
+    },
     [registerMutation],
   );
 
@@ -83,7 +89,13 @@ const usePersistRegister = () => {
 const usePersistRefresh = () => {
   const [refreshMutation, { isLoading }] = useRefreshMutation();
 
-  const refresh = useCallback(() => refreshMutation(), [refreshMutation]);
+  const refresh = useCallback(async () => {
+    try {
+      await refreshMutation().unwrap();
+    } catch {
+      /* errors surfaced via toasts in baseApi */
+    }
+  }, [refreshMutation]);
 
   return { refresh, isLoading };
 };
