@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,7 +9,7 @@ import { TextField, PasswordField } from "@/components/forms";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, isLoading } = usePersistLogin();
+  const { login, isLoading, isSuccess } = usePersistLogin();
 
   const {
     register,
@@ -19,9 +20,12 @@ const LoginPage = () => {
     defaultValues: { identifier: "john@acmecorp.com", password: "password" },
   });
 
-  const onSubmit = async (data: LoginFormData) => {
-    const ok = await login(data);
-    if (ok) navigate("/", { replace: true });
+  useEffect(() => {
+    if (isSuccess) navigate("/", { replace: true });
+  }, [isSuccess, navigate]);
+
+  const onSubmit = (data: LoginFormData) => {
+    login(data);
   };
 
   return (

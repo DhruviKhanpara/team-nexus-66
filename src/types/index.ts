@@ -9,6 +9,6 @@ export type {
 } from './chat';
 export type { NavSection, ChatContext, AuthState } from './ui';
 export type {
-  UserDto, UserProfileDto, LoginResponseDto, RegisterResponseDto,
-  LoginRequest, RegisterRequest, UserViewModel,
+  LoginDTO, RegisterDTO, ForgotPasswordDTO, ResetPasswordDTO, VerifyEmailDTO,
+  LoginVO, RegisterVO, ForgotPasswordVO, ResetPasswordVO, VerifyEmailVO,
 } from './auth';

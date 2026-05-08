@@ -5,94 +5,86 @@
  *  - useHydrateX → fetch + store data
  *  - usePersistX → create/update/delete operations
  *
- * Uses RTK Query hooks for API calls, mappers for transformation,
- * and dispatches results to Redux.
+ * Each hook wraps an RTK Query mutation, applies the VO→DTO mapper,
+ * and exposes `isLoading` / `isSuccess` flags from RTK Query.
+ * Errors are surfaced via the centralized toast layer in baseApi,
+ * so individual hooks do not need to return success/failure booleans.
  */
 
 import { useCallback } from "react";
 import { useAppDispatch } from "@/app/store";
-import { setUser, clearAuth } from "@/features/authSlice";
+import { clearAuth } from "@/features/authSlice";
 import {
   useLoginMutation,
   useRegisterMutation,
+  useRefreshMutation,
   useLogoutMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+  useVerifyEmailMutation,
+  useResendVerificationMutation,
 } from "@/api/authApi";
-import { mapUserDtoToUser } from "./auth.mapper";
-import type { LoginRequest, RegisterRequest } from "@/types/auth";
+import {
+  mapLoginVOToDTO,
+  mapRegisterVOToDTO,
+  mapForgotPasswordVOToDTO,
+  mapResetPasswordVOToDTO,
+  mapVerifyEmailVOToDTO,
+} from "./auth.mapper";
+import type {
+  LoginVO,
+  RegisterVO,
+  ForgotPasswordVO,
+  ResetPasswordVO,
+  VerifyEmailVO,
+} from "@/types/auth";
 import { baseApi } from "@/api/baseApi";
 
 /**
- * Hydrate current user profile into Redux.
- */
-// const useHydrateUser = () => {
-//   console.log("useHydrateUser called");
-//   const [fetchProfile, { isLoading }] = useLazyGetMyProfileQuery();
-//   const dispatch = useAppDispatch();
-
-//   const hydrateUser = useCallback(async () => {
-//     const profile = await fetchProfile().unwrap();
-//     const user = mapUserDtoToUser({
-//       _id: profile._id,
-//       name: profile.name,
-//       username: profile.username ?? "",
-//       email: profile.email ?? "",
-//     });
-//     dispatch(setUser(user));
-//     return user;
-//   }, [fetchProfile, dispatch]);
-
-//   return { hydrateUser, isLoading };
-// };
-
-/**
- * Login use case — authenticate. Returns true on success, false on failure.
- * Errors are surfaced via the centralized toast layer in baseApi.
+ * Login use case — authenticate. Session is established via cookies.
+ * Consumers read `isSuccess` to decide when to navigate.
  */
 const usePersistLogin = () => {
-  const [loginMutation, { isLoading }] = useLoginMutation();
+  const [loginMutation, { isLoading, isSuccess }] = useLoginMutation();
 
   const login = useCallback(
-    async (credentials: LoginRequest): Promise<boolean> => {
-      try {
-        await loginMutation(credentials).unwrap();
-        return true;
-      } catch {
-        return false;
-      }
-    },
+    (vo: LoginVO) => loginMutation(mapLoginVOToDTO(vo)),
     [loginMutation],
   );
 
-  return { login, isLoading };
+  return { login, isLoading, isSuccess };
 };
 
 /**
- * Register use case — create account and store user in Redux.
- * Returns the created user on success, null on failure.
+ * Register use case — create account. Session cookies are set by the server;
+ * the user record will be hydrated by `useGetMeQuery` after navigation.
+ * Consumers read `isSuccess` to decide when to navigate.
  */
 const usePersistRegister = () => {
-  const [registerMutation, { isLoading }] = useRegisterMutation();
-  const dispatch = useAppDispatch();
+  const [registerMutation, { isLoading, isSuccess }] = useRegisterMutation();
 
   const register = useCallback(
-    async (data: RegisterRequest) => {
-      try {
-        const response = await registerMutation(data).unwrap();
-        const user = mapUserDtoToUser(response.user);
-        dispatch(setUser(user));
-        return user;
-      } catch {
-        return null;
-      }
-    },
-    [registerMutation, dispatch],
+    (vo: RegisterVO) => registerMutation(mapRegisterVOToDTO(vo)),
+    [registerMutation],
   );
 
-  return { register, isLoading };
+  return { register, isLoading, isSuccess };
 };
 
 /**
- * Logout use case — clear auth state.
+ * Refresh use case — manually trigger a token refresh.
+ * Note: baseApi already performs silent refresh on 401, so this is rarely used directly.
+ */
+const usePersistRefresh = () => {
+  const [refreshMutation, { isLoading }] = useRefreshMutation();
+
+  const refresh = useCallback(() => refreshMutation(), [refreshMutation]);
+
+  return { refresh, isLoading };
+};
+
+/**
+ * Logout use case — clear server session and local auth state.
  */
 const usePersistLogout = () => {
   const [logoutMutation] = useLogoutMutation();
@@ -101,18 +93,83 @@ const usePersistLogout = () => {
   const logout = useCallback(async () => {
     try {
       await logoutMutation().unwrap();
-      // reset the whole api state(cached data, tags etc) so that in <PublicRoute/> - useGetMeQuery doesn't return cached data and is refetched
+      // reset the whole api state so PublicRoute's useGetMeQuery refetches
       dispatch(baseApi.util.resetApiState());
       dispatch(clearAuth());
-    } catch {}
+    } catch {
+      /* errors are surfaced via toasts in baseApi */
+    }
   }, [logoutMutation, dispatch]);
 
   return { logout };
 };
 
+/**
+ * Forgot password use case — request OTP email.
+ */
+const usePersistForgotPassword = () => {
+  const [forgotPasswordMutation, { isLoading }] = useForgotPasswordMutation();
+
+  const forgotPassword = useCallback(
+    (vo: ForgotPasswordVO) =>
+      forgotPasswordMutation(mapForgotPasswordVOToDTO(vo)),
+    [forgotPasswordMutation],
+  );
+
+  return { forgotPassword, isLoading };
+};
+
+/**
+ * Reset password use case — submit OTP + new password.
+ */
+const usePersistResetPassword = () => {
+  const [resetPasswordMutation, { isLoading }] = useResetPasswordMutation();
+
+  const resetPassword = useCallback(
+    (vo: ResetPasswordVO) =>
+      resetPasswordMutation(mapResetPasswordVOToDTO(vo)),
+    [resetPasswordMutation],
+  );
+
+  return { resetPassword, isLoading };
+};
+
+/**
+ * Verify email use case — submit email-verification OTP.
+ */
+const usePersistVerifyEmail = () => {
+  const [verifyEmailMutation, { isLoading }] = useVerifyEmailMutation();
+
+  const verifyEmail = useCallback(
+    (vo: VerifyEmailVO) => verifyEmailMutation(mapVerifyEmailVOToDTO(vo)),
+    [verifyEmailMutation],
+  );
+
+  return { verifyEmail, isLoading };
+};
+
+/**
+ * Resend verification OTP use case.
+ */
+const usePersistResendVerification = () => {
+  const [resendVerificationMutation, { isLoading }] =
+    useResendVerificationMutation();
+
+  const resendVerification = useCallback(
+    () => resendVerificationMutation(),
+    [resendVerificationMutation],
+  );
+
+  return { resendVerification, isLoading };
+};
+
 export {
-  //   useHydrateUser,
   usePersistLogin,
   usePersistRegister,
+  usePersistRefresh,
   usePersistLogout,
+  usePersistForgotPassword,
+  usePersistResetPassword,
+  usePersistVerifyEmail,
+  usePersistResendVerification,
 };
