@@ -2,23 +2,21 @@
  * RegisterPage — react-hook-form + Zod + usePersistRegister use case.
  *
  * Errors are surfaced via the centralized toast layer in baseApi.
+ * Navigation is driven by `isSuccess` from the underlying RTK Query mutation.
  */
 
+import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistRegister } from "@/domain/auth";
 import { registerSchema, type RegisterFormData } from "@/schemas/auth.schema";
-import { useAppDispatch } from "@/app/store";
-import { setUser } from "@/features/authSlice";
 import { MessageSquare } from "lucide-react";
 import { TextField, PasswordField } from "@/components/forms";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-
-  const { isLoading } = usePersistRegister();
+  const { register: registerUser, isLoading, isSuccess } = usePersistRegister();
 
   const {
     register,
@@ -29,17 +27,12 @@ const RegisterPage = () => {
     defaultValues: { name: "", username: "", email: "", password: "" },
   });
 
-  const onSubmit = async (data: RegisterFormData) => {
-    // TODO: Replace mock with: await registerUser(data);
-    dispatch(
-      setUser({
-        id: "mock-id",
-        name: data.name,
-        email: data.email,
-        iconUrl: "",
-      }),
-    );
-    navigate("/");
+  useEffect(() => {
+    if (isSuccess) navigate("/", { replace: true });
+  }, [isSuccess, navigate]);
+
+  const onSubmit = (data: RegisterFormData) => {
+    registerUser(data);
   };
 
   return (
