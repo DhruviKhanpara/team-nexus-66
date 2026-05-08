@@ -10,8 +10,6 @@
  */
 
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import type { User } from "@/types";
-import { currentUser } from "@/data/mockData";
 import { MyDetailVO } from "@/types/user";
 
 interface AuthState {

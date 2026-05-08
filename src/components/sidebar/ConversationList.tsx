@@ -38,19 +38,19 @@ const ConversationList = () => {
     });
     if (!searchQuery) return sorted;
     return sorted.filter(c =>
-      getConversationDisplayName(c, currentUser?._id, userMap)
+      getConversationDisplayName(c, currentUser?.id, userMap)
         .toLowerCase()
         .includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery, currentUser?._id]);
+  }, [searchQuery, currentUser?.id]);
 
   return (
     <div className="space-y-0.5">
       {filtered.map(conv => {
-        const name = getConversationDisplayName(conv, currentUser?._id, userMap);
+        const name = getConversationDisplayName(conv, currentUser?.id, userMap);
         const isActive = activeChatContext?.type === 'conversation' && activeChatContext.id === conv._id;
         const otherUserId = conv.type === 'direct'
-          ? conv.participants.find(p => p.userId !== currentUser?._id)?.userId
+          ? conv.participants.find(p => p.userId !== currentUser?.id)?.userId
           : undefined;
         const unread = readStates.find(r => r.conversationId === conv._id)?.unreadCount || 0;
         const lastMsg = conv.lastMessage;

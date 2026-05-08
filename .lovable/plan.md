@@ -1,45 +1,42 @@
+## Goal
 
+Standardize every auth use case in `src/domain/auth/auth.usecase.ts` to use `async/await` + `.unwrap()` inside a `try/catch`, regardless of whether the hook has post-success side effects. Errors stay swallowed (toasted by `baseApi`); RTK Query state (`isLoading`, `isSuccess`) remains the source of truth for UI flow.
 
-## Cleanup & Hardening Plan (Approved + Extras)
+## Pattern
 
-Executing the previously approved plan plus removal of `@tanstack/react-query` and `vaul`.
+Every `useCallback` becomes `async`, awaits `.unwrap()`, and wraps in `try/catch`:
 
-### 1. Package Manager → npm
-- Delete `bun.lock` and `bun.lockb`.
-- Add `"packageManager": "npm@10.x"` to `package.json`.
+```ts
+const login = useCallback(
+  async (vo: LoginVO) => {
+    try {
+      await loginMutation(mapLoginVOToDTO(vo)).unwrap();
+    } catch {
+      /* errors surfaced via toasts in baseApi */
+    }
+  },
+  [loginMutation],
+);
+```
 
-### 2. Remove Testing Setup
-- Delete `vitest.config.ts`, `src/test/setup.ts`, `src/test/example.test.ts` (entire `src/test/` folder).
-- Remove `test` / `test:watch` scripts from `package.json`.
-- Remove devDependencies: `vitest`, `@testing-library/jest-dom`, `@testing-library/react`, `jsdom`.
-- Remove `"types": ["vitest/globals"]` from `tsconfig.app.json`.
+Return type becomes `Promise<void>` for all triggers. Consumers continue to rely on `isSuccess` from RTK Query for navigation decisions (already wired this way in `LoginPage` / `RegisterPage`).
 
-### 3. TypeScript Hardening
-- **`tsconfig.json`**: enable `strict: true`, drop the four relaxed flags, add `"baseUrl": "."`, keep `skipLibCheck` and `paths`.
-- **`tsconfig.app.json`**: enable `strict: true`, `noFallthroughCasesInSwitch: true`, add `"baseUrl": "."`, remove `allowImportingTsExtensions` and the vitest types entry. Enable `noUnusedLocals` / `noUnusedParameters` — for shadcn UI noise I'll use underscore-prefix on unused params rather than editing component internals.
-- **`tsconfig.node.json`**: enable `noUnusedLocals` / `noUnusedParameters`, remove `allowImportingTsExtensions`.
-- Fix resulting errors across our own code (`api/`, `domain/`, `features/`, `pages/`, `components/chat`, `components/sidebar`, `components/layout`).
+## Hooks to update in `src/domain/auth/auth.usecase.ts`
 
-### 4. Environment Configuration
-- Create `.env.development` and `.env.production` with `VITE_API_BASE_URL` and `VITE_SOCKET_URL`.
-- Create `src/config/env.ts` exporting a typed `env` object.
-- Update `src/api/baseApi.ts` and `src/socket/socketClient.ts` to import from `@/config/env`.
+1. `usePersistLogin` — wrap `loginMutation` call
+2. `usePersistRegister` — wrap `registerMutation` call
+3. `usePersistRefresh` — wrap `refreshMutation` call
+4. `usePersistForgotPassword` — wrap `forgotPasswordMutation` call
+5. `usePersistResetPassword` — wrap `resetPasswordMutation` call
+6. `usePersistVerifyEmail` — wrap `verifyEmailMutation` call
+7. `usePersistResendVerification` — wrap `resendVerificationMutation` call
+8. `usePersistLogout` — already uses async/await + unwrap; leave as-is
 
-### 5. Vite Config Review
-- Remove `hmr.overlay: false` to restore the dev error overlay.
-- Keep `componentTagger` (required for Lovable visual editing) with a brief comment.
-- React plugin and `@` alias unchanged.
+## Header comment update
 
-### 6. Remove Unused Libraries
-- **`@tanstack/react-query`**: zero imports — remove from `package.json` dependencies.
-- **`vaul`**: only consumed by `src/components/ui/drawer.tsx`. Delete `src/components/ui/drawer.tsx` and remove `vaul` from `package.json`. Verified no app code imports the drawer.
+Update the file's top doc block to state explicitly: "Every use case awaits `.unwrap()` inside a `try/catch`. Errors are swallowed because `baseApi` toasts them; consumers read `isLoading` / `isSuccess` from RTK Query."
 
-### Risks
-- Strict mode may surface latent type issues in our own code — I'll fix them inline (no `any` unless unavoidable).
-- `.env.production` ships with a placeholder URL; replace before deploying.
+## Out of scope
 
-### Files Touched
-- **Delete**: `bun.lock`, `bun.lockb`, `vitest.config.ts`, `src/test/` (folder), `src/components/ui/drawer.tsx`
-- **Create**: `.env.development`, `.env.production`, `src/config/env.ts`
-- **Update**: `package.json`, `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json`, `vite.config.ts`, `src/api/baseApi.ts`, `src/socket/socketClient.ts`, plus any source files needing strict-mode fixes
-
+- No changes to `authApi.ts`, `auth.mapper.ts`, `auth.ts`, `LoginPage.tsx`, `RegisterPage.tsx`, or any other file.
+- No change to the public hook signatures other than the trigger now returning `Promise<void>` instead of the RTK Query mutation result object.

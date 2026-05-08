@@ -5,10 +5,9 @@
  *  - useHydrateX → fetch + store data
  *  - usePersistX → create/update/delete operations
  *
- * Each hook wraps an RTK Query mutation, applies the VO→DTO mapper,
- * and exposes `isLoading` / `isSuccess` flags from RTK Query.
- * Errors are surfaced via the centralized toast layer in baseApi,
- * so individual hooks do not need to return success/failure booleans.
+ * Every use case awaits `.unwrap()` inside a `try/catch`. Errors are
+ * swallowed because `baseApi` toasts them centrally; consumers read
+ * `isLoading` / `isSuccess` from RTK Query for UI flow decisions.
  */
 
 import { useCallback } from "react";
@@ -48,7 +47,13 @@ const usePersistLogin = () => {
   const [loginMutation, { isLoading, isSuccess }] = useLoginMutation();
 
   const login = useCallback(
-    (vo: LoginVO) => loginMutation(mapLoginVOToDTO(vo)),
+    async (vo: LoginVO) => {
+      try {
+        await loginMutation(mapLoginVOToDTO(vo)).unwrap();
+      } catch {
+        /* errors surfaced via toasts in baseApi */
+      }
+    },
     [loginMutation],
   );
 
@@ -64,7 +69,13 @@ const usePersistRegister = () => {
   const [registerMutation, { isLoading, isSuccess }] = useRegisterMutation();
 
   const register = useCallback(
-    (vo: RegisterVO) => registerMutation(mapRegisterVOToDTO(vo)),
+    async (vo: RegisterVO) => {
+      try {
+        await registerMutation(mapRegisterVOToDTO(vo)).unwrap();
+      } catch {
+        /* errors surfaced via toasts in baseApi */
+      }
+    },
     [registerMutation],
   );
 
@@ -78,7 +89,13 @@ const usePersistRegister = () => {
 const usePersistRefresh = () => {
   const [refreshMutation, { isLoading }] = useRefreshMutation();
 
-  const refresh = useCallback(() => refreshMutation(), [refreshMutation]);
+  const refresh = useCallback(async () => {
+    try {
+      await refreshMutation().unwrap();
+    } catch {
+      /* errors surfaced via toasts in baseApi */
+    }
+  }, [refreshMutation]);
 
   return { refresh, isLoading };
 };
@@ -111,8 +128,13 @@ const usePersistForgotPassword = () => {
   const [forgotPasswordMutation, { isLoading }] = useForgotPasswordMutation();
 
   const forgotPassword = useCallback(
-    (vo: ForgotPasswordVO) =>
-      forgotPasswordMutation(mapForgotPasswordVOToDTO(vo)),
+    async (vo: ForgotPasswordVO) => {
+      try {
+        await forgotPasswordMutation(mapForgotPasswordVOToDTO(vo)).unwrap();
+      } catch {
+        /* errors surfaced via toasts in baseApi */
+      }
+    },
     [forgotPasswordMutation],
   );
 
@@ -126,8 +148,13 @@ const usePersistResetPassword = () => {
   const [resetPasswordMutation, { isLoading }] = useResetPasswordMutation();
 
   const resetPassword = useCallback(
-    (vo: ResetPasswordVO) =>
-      resetPasswordMutation(mapResetPasswordVOToDTO(vo)),
+    async (vo: ResetPasswordVO) => {
+      try {
+        await resetPasswordMutation(mapResetPasswordVOToDTO(vo)).unwrap();
+      } catch {
+        /* errors surfaced via toasts in baseApi */
+      }
+    },
     [resetPasswordMutation],
   );
 
@@ -141,7 +168,13 @@ const usePersistVerifyEmail = () => {
   const [verifyEmailMutation, { isLoading }] = useVerifyEmailMutation();
 
   const verifyEmail = useCallback(
-    (vo: VerifyEmailVO) => verifyEmailMutation(mapVerifyEmailVOToDTO(vo)),
+    async (vo: VerifyEmailVO) => {
+      try {
+        await verifyEmailMutation(mapVerifyEmailVOToDTO(vo)).unwrap();
+      } catch {
+        /* errors surfaced via toasts in baseApi */
+      }
+    },
     [verifyEmailMutation],
   );
 
@@ -155,10 +188,13 @@ const usePersistResendVerification = () => {
   const [resendVerificationMutation, { isLoading }] =
     useResendVerificationMutation();
 
-  const resendVerification = useCallback(
-    () => resendVerificationMutation(),
-    [resendVerificationMutation],
-  );
+  const resendVerification = useCallback(async () => {
+    try {
+      await resendVerificationMutation().unwrap();
+    } catch {
+      /* errors surfaced via toasts in baseApi */
+    }
+  }, [resendVerificationMutation]);
 
   return { resendVerification, isLoading };
 };

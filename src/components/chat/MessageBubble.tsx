@@ -37,7 +37,7 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
   const { openThread } = useThread();
 
   const sender = userMap[message.senderId];
-  const isOwn = message.senderId === currentUser?._id;
+  const isOwn = message.senderId === currentUser?.id;
   const contextId = activeChatContext?.id || '';
 
   const handleReaction = useCallback((emoji: string) => {
@@ -104,7 +104,7 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
                   key={reaction.emoji}
                   onClick={() => handleReaction(reaction.emoji)}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors ${
-                    currentUser && reaction.users.includes(currentUser._id)
+                    currentUser && reaction.users.includes(currentUser.id)
                       ? 'bg-primary/10 border-primary/30 text-primary'
                       : 'bg-muted border-border text-muted-foreground hover:bg-accent'
                   }`}
