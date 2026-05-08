@@ -45,14 +45,20 @@ import { baseApi } from "@/api/baseApi";
 // };
 
 /**
- * Login use case — authenticate and store user in Redux.
+ * Login use case — authenticate. Returns true on success, false on failure.
+ * Errors are surfaced via the centralized toast layer in baseApi.
  */
 const usePersistLogin = () => {
   const [loginMutation, { isLoading }] = useLoginMutation();
 
   const login = useCallback(
-    async (credentials: LoginRequest) => {
-      await loginMutation(credentials).unwrap();
+    async (credentials: LoginRequest): Promise<boolean> => {
+      try {
+        await loginMutation(credentials).unwrap();
+        return true;
+      } catch {
+        return false;
+      }
     },
     [loginMutation],
   );
@@ -62,6 +68,7 @@ const usePersistLogin = () => {
 
 /**
  * Register use case — create account and store user in Redux.
+ * Returns the created user on success, null on failure.
  */
 const usePersistRegister = () => {
   const [registerMutation, { isLoading }] = useRegisterMutation();
@@ -69,10 +76,14 @@ const usePersistRegister = () => {
 
   const register = useCallback(
     async (data: RegisterRequest) => {
-      const response = await registerMutation(data).unwrap();
-      const user = mapUserDtoToUser(response.user);
-      dispatch(setUser(user));
-      return user;
+      try {
+        const response = await registerMutation(data).unwrap();
+        const user = mapUserDtoToUser(response.user);
+        dispatch(setUser(user));
+        return user;
+      } catch {
+        return null;
+      }
     },
     [registerMutation, dispatch],
   );
