@@ -1,6 +1,14 @@
 // Re-export all types from domain-specific files
 export type { User, Presence, UserStatusType, UserStatus } from './user';
-export type { Organization, MembershipScope, MembershipRole, Membership, Team, ChannelType, Channel } from './organization';
+export type {
+  OrgSummaryDTO, OrgDetailDTO, OrgSummaryVO, OrgDetailVO,
+  MembershipScope, MembershipRole, Membership, ChannelType, Channel,
+} from './organization';
+export type {
+  PaginatedDTO, PaginatedVO,
+  TeamSummaryDTO, TeamDetailDTO, TeamsListDTO, GetTeamsQueryDTO,
+  TeamSummaryVO, TeamDetailVO, TeamsListVO, GetTeamsQueryVO,
+} from './team';
 export type {
   ConversationType, GroupRole, Participant, LastMessage, Conversation,
   MessageType, Reaction, Receipt, DmStatus, FileAttachment, Message,

@@ -4,6 +4,8 @@ import { baseApi } from '@/api/baseApi';
 import authReducer from '@/features/authSlice';
 import uiReducer from '@/features/uiSlice';
 import chatReducer from '@/features/chatSlice';
+import organizationReducer from '@/features/organizationSlice';
+import teamReducer from '@/features/teamSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +13,8 @@ export const store = configureStore({
     auth: authReducer,
     ui: uiReducer,
     chat: chatReducer,
+    organization: organizationReducer,
+    team: teamReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(baseApi.middleware),
