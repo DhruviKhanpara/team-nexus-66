@@ -4,9 +4,12 @@ import RegisterPage from "./pages/RegisterPage";
 import AppLayout from "./components/layout/AppLayout";
 import NotFound from "./pages/NotFound";
 import { useHydrateMe } from "./domain/user/user.usecase";
+import { useHydrateMyOrganizations } from "./domain/organization";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isFetching } = useHydrateMe();
+  // Hydrate organizations (and reconcile persisted selectedOrgId) once authenticated.
+  useHydrateMyOrganizations();
 
   if (isFetching) {
     return <div>Calling me endpoint - test</div>;
