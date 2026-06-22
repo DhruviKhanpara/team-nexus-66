@@ -9,7 +9,7 @@ import { useHydrateMyOrganizations } from "./domain/organization";
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isFetching } = useHydrateMe();
   // Hydrate organizations (and reconcile persisted selectedOrgId) once authenticated.
-  useHydrateMyOrganizations();
+  useHydrateMyOrganizations({ skip: !user });
 
   if (isFetching) {
     return <div>Calling me endpoint - test</div>;

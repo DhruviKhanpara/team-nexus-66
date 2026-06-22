@@ -24,8 +24,10 @@ import {
 /**
  * Hydrate the list of organizations the current user belongs to.
  */
-const useHydrateMyOrganizations = () => {
-  const { data, isLoading, isFetching } = useGetMyOrganizationsQuery();
+const useHydrateMyOrganizations = (options?: { skip?: boolean }) => {
+  const { data, isLoading, isFetching } = useGetMyOrganizationsQuery(undefined, {
+    skip: options?.skip,
+  });
   const dispatch = useAppDispatch();
   const selectedOrgId = useAppSelector((s) => s.organization.selectedOrgId);
 
