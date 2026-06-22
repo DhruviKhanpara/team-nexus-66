@@ -1,5 +1,5 @@
 import type {
-  User, Organization, Team, Channel, Conversation,
+  User, Channel, Conversation,
   Message, UserStatus, ReadState, Notification,
 } from '@/types';
 
@@ -43,28 +43,6 @@ export const userStatuses: UserStatus[] = [
 
 export const statusMap: Record<string, UserStatus> = Object.fromEntries(userStatuses.map(s => [s.userId, s]));
 
-// ============================================================================
-// Organization
-// ============================================================================
-
-export const organization: Organization = {
-  _id: 'org1',
-  name: 'Acme Corp',
-  slug: 'acme-corp',
-  logo: { url: null, publicId: null },
-  owner: 'u1',
-  createdAt: '2024-01-01T00:00:00Z',
-};
-
-// ============================================================================
-// Teams
-// ============================================================================
-
-export const teams: Team[] = [
-  { _id: 't1', name: 'Engineering', description: 'Software engineering team', organizationId: 'org1', createdBy: 'u1', avatar: { url: null, publicId: null }, isPrivate: false, isArchived: false, archivedAt: null, memberCount: 6, createdAt: '2024-01-15T00:00:00Z' },
-  { _id: 't2', name: 'Design', description: 'Product design and UX', organizationId: 'org1', createdBy: 'u2', avatar: { url: null, publicId: null }, isPrivate: false, isArchived: false, archivedAt: null, memberCount: 4, createdAt: '2024-01-20T00:00:00Z' },
-  { _id: 't3', name: 'Marketing', description: 'Growth and marketing', organizationId: 'org1', createdBy: 'u4', avatar: { url: null, publicId: null }, isPrivate: false, isArchived: false, archivedAt: null, memberCount: 3, createdAt: '2024-02-01T00:00:00Z' },
-];
 
 // ============================================================================
 // Channels
