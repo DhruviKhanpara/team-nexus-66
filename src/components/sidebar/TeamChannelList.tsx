@@ -2,18 +2,28 @@ import { useState } from 'react';
 import { ChevronRight, Hash, Megaphone, Lock, Plus } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/app/store';
 import { setActiveChatContext } from '@/features/uiSlice';
-import { teams, channels } from '@/data/mockData';
+import { channels } from '@/data/mockData';
+import { useHydrateTeams } from '@/domain/team';
+import type { TeamSummaryVO } from '@/types/team';
 
 const TeamChannelList = () => {
   const { activeChatContext, searchQuery } = useAppSelector(s => s.ui);
   const { readStates } = useAppSelector(s => s.chat);
+  const selectedOrgId = useAppSelector(s => s.organization.selectedOrgId);
+  const teamsByOrgId = useAppSelector(s => s.team.teamsByOrgId);
   const dispatch = useAppDispatch();
-  const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>(
-    Object.fromEntries(teams.map(t => [t._id, true]))
-  );
+
+  // Fetch + hydrate teams for the selected org
+  useHydrateTeams(selectedOrgId);
+
+  const teams: TeamSummaryVO[] = selectedOrgId
+    ? teamsByOrgId[selectedOrgId] ?? []
+    : [];
+
+  const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
 
   const toggleTeam = (teamId: string) => {
-    setExpandedTeams(prev => ({ ...prev, [teamId]: !prev[teamId] }));
+    setExpandedTeams(prev => ({ ...prev, [teamId]: !(prev[teamId] ?? true) }));
   };
 
   const filteredTeams = teams.filter(t =>
@@ -31,24 +41,41 @@ const TeamChannelList = () => {
     return Hash;
   };
 
+  if (!selectedOrgId) {
+    return (
+      <div className="px-3 py-6 text-xs text-muted-foreground">
+        Select an organization to view its teams.
+      </div>
+    );
+  }
+
+  if (filteredTeams.length === 0) {
+    return (
+      <div className="px-3 py-6 text-xs text-muted-foreground">
+        No teams found.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-1">
       {filteredTeams.map(team => {
-        const teamChannels = channels.filter(c => c.teamId === team._id && !c.isArchived);
+        const isExpanded = expandedTeams[team.id] ?? true;
+        const teamChannels = channels.filter(c => c.teamId === team.id && !c.isArchived);
         const filteredChannels = searchQuery
           ? teamChannels.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
           : teamChannels;
 
         return (
-          <div key={team._id}>
+          <div key={team.id}>
             {/* Team header */}
             <button
-              onClick={() => toggleTeam(team._id)}
+              onClick={() => toggleTeam(team.id)}
               className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md hover:bg-accent transition-colors group"
             >
               <ChevronRight
                 className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${
-                  expandedTeams[team._id] ? 'rotate-90' : ''
+                  isExpanded ? 'rotate-90' : ''
                 }`}
               />
               <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold bg-primary text-primary-foreground">
@@ -61,7 +88,7 @@ const TeamChannelList = () => {
             </button>
 
             {/* Channels */}
-            {expandedTeams[team._id] && (
+            {isExpanded && (
               <div className="ml-6 mt-0.5 space-y-px">
                 {filteredChannels.map(channel => {
                   const Icon = getChannelIcon(channel);
