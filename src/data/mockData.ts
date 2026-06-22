@@ -1,5 +1,5 @@
 import type {
-  User, Organization, Team, Channel, Conversation,
+  User, Channel, Conversation,
   Message, UserStatus, ReadState, Notification,
 } from '@/types';
 

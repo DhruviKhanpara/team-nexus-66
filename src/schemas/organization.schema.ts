@@ -13,13 +13,13 @@ const createOrganizationSchema = z.object({
     .string({ required_error: "Organization slug is required." })
     .min(2, "Slug must be at least 2 characters.")
     .max(48, "Slug cannot exceed 48 characters.")
-    .refine((val) => !val.startsWith("-") && !val.endsWith("-"), {
-      message: "Slug cannot start or end with a hyphen.",
-    })
     .regex(
       orgSlugRegex,
       "Slug can only contain lowercase letters, numbers, and hyphens.",
-    ),
+    )
+    .refine((val) => !val.startsWith("-") && !val.endsWith("-"), {
+      message: "Slug cannot start or end with a hyphen.",
+    }),
 });
 
 type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
