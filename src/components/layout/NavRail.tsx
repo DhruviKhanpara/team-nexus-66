@@ -13,32 +13,49 @@ import {
 } from "@/components/ui/tooltip";
 import { notifications as mockNotifications } from "@/data/mockData";
 import { usePersistLogout } from "@/domain/auth";
+import {
+  useSelectOrganization,
+} from "@/domain/organization";
 import { setActiveNav, toggleTheme } from "@/features/uiSlice";
 import { NAV_ITEMS } from "@/lib/constants";
 import { getInitials } from "@/lib/helpers";
 import type { NavSection } from "@/types";
 import {
-  Building2,
+  Check,
   ChevronRight,
   LogOut,
   Moon,
   Palette,
+  Plus,
   Settings,
-  Shield,
   Sun,
   User,
-  Users,
 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import CreateOrganizationDialog from "@/components/organization/CreateOrganizationDialog";
+import EditOrganizationDialog from "@/components/organization/EditOrganizationDialog";
 
 const NavRail = () => {
   const { activeNav, theme } = useAppSelector((s) => s.ui);
   const user = useAppSelector((s) => s.auth.user);
+  const organizations = useAppSelector((s) => s.organization.organizations);
+  const selectedOrgId = useAppSelector(
+    (s) => s.organization.selectedOrgId,
+  );
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const selectOrganization = useSelectOrganization();
 
   const { logout } = usePersistLogout();
+
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
+  const [editOrgOpen, setEditOrgOpen] = useState(false);
+
+  const selectedOrg = useMemo(
+    () => organizations.find((o) => o.id === selectedOrgId) ?? null,
+    [organizations, selectedOrgId],
+  );
 
   const unreadNotifCount = mockNotifications.filter((n) => !n.isRead).length;
 
