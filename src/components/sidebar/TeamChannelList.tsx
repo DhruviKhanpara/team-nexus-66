@@ -53,78 +53,113 @@ const TeamChannelList = () => {
     );
   }
 
-  if (filteredTeams.length === 0) {
-    return (
-      <div className="px-3 py-6 text-xs text-muted-foreground">
-        No teams found.
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-1">
-      {filteredTeams.map(team => {
-        const isExpanded = expandedTeams[team.id] ?? true;
-        const teamChannels = channels.filter(c => c.teamId === team.id && !c.isArchived);
-        const filteredChannels = searchQuery
-          ? teamChannels.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
-          : teamChannels;
+    <>
+      {/* Section header with create-team action */}
+      <div className="flex items-center justify-between px-2 pt-1 pb-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Teams
+        </span>
+        <button
+          onClick={() => setCreateTeamOpen(true)}
+          className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Create team"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
 
-        return (
-          <div key={team.id}>
-            {/* Team header */}
-            <button
-              onClick={() => toggleTeam(team.id)}
-              className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md hover:bg-accent transition-colors group"
-            >
-              <ChevronRight
-                className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${
-                  isExpanded ? 'rotate-90' : ''
-                }`}
-              />
-              <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold bg-primary text-primary-foreground">
-                {team.name[0]}
-              </div>
-              <span className="text-sm font-medium text-sidebar-foreground flex-1 text-left truncate">
-                {team.name}
-              </span>
-              <Plus className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
+      {filteredTeams.length === 0 ? (
+        <div className="px-3 py-6 text-xs text-muted-foreground">
+          No teams found.
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {filteredTeams.map(team => {
+            const isExpanded = expandedTeams[team.id] ?? true;
+            const teamChannels = channels.filter(c => c.teamId === team.id && !c.isArchived);
+            const filteredChannels = searchQuery
+              ? teamChannels.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              : teamChannels;
 
-            {/* Channels */}
-            {isExpanded && (
-              <div className="ml-6 mt-0.5 space-y-px">
-                {filteredChannels.map(channel => {
-                  const Icon = getChannelIcon(channel);
-                  const unread = getUnreadCount(channel._id);
-                  const isActive = activeChatContext?.type === 'channel' && activeChatContext.id === channel._id;
-
-                  return (
-                    <button
-                      key={channel._id}
-                      onClick={() => dispatch(setActiveChatContext({ type: 'channel', id: channel._id }))}
-                      className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors ${
-                        isActive
-                          ? 'bg-accent text-accent-foreground font-medium'
-                          : 'text-sidebar-foreground hover:bg-accent/50'
+            return (
+              <div key={team.id}>
+                {/* Team header */}
+                <div className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md hover:bg-accent transition-colors group">
+                  <button
+                    onClick={() => toggleTeam(team.id)}
+                    className="flex items-center gap-2 flex-1 min-w-0"
+                  >
+                    <ChevronRight
+                      className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${
+                        isExpanded ? 'rotate-90' : ''
                       }`}
-                    >
-                      <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <span className={`truncate flex-1 text-left ${unread > 0 ? 'font-semibold' : ''}`}>
-                        {channel.name}
-                      </span>
-                      {unread > 0 && (
-                        <span className="unread-dot shrink-0" />
-                      )}
-                    </button>
-                  );
-                })}
+                    />
+                    <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold bg-primary text-primary-foreground">
+                      {team.name[0]}
+                    </div>
+                    <span className="text-sm font-medium text-sidebar-foreground flex-1 text-left truncate">
+                      {team.name}
+                    </span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditTeam(team); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-accent-foreground/10"
+                    aria-label={`Edit ${team.name}`}
+                  >
+                    <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                </div>
+
+                {/* Channels */}
+                {isExpanded && (
+                  <div className="ml-6 mt-0.5 space-y-px">
+                    {filteredChannels.map(channel => {
+                      const Icon = getChannelIcon(channel);
+                      const unread = getUnreadCount(channel._id);
+                      const isActive = activeChatContext?.type === 'channel' && activeChatContext.id === channel._id;
+
+                      return (
+                        <button
+                          key={channel._id}
+                          onClick={() => dispatch(setActiveChatContext({ type: 'channel', id: channel._id }))}
+                          className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors ${
+                            isActive
+                              ? 'bg-accent text-accent-foreground font-medium'
+                              : 'text-sidebar-foreground hover:bg-accent/50'
+                          }`}
+                        >
+                          <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
+                          <span className={`truncate flex-1 text-left ${unread > 0 ? 'font-semibold' : ''}`}>
+                            {channel.name}
+                          </span>
+                          {unread > 0 && (
+                            <span className="unread-dot shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+            );
+          })}
+        </div>
+      )}
+
+      <CreateTeamDialog
+        open={createTeamOpen}
+        onOpenChange={setCreateTeamOpen}
+        orgId={selectedOrgId}
+      />
+      {editTeam && (
+        <EditTeamDialog
+          open={!!editTeam}
+          onOpenChange={(o) => !o && setEditTeam(null)}
+          team={editTeam}
+        />
+      )}
+    </>
   );
 };
 
