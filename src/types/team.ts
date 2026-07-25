@@ -67,6 +67,17 @@ export interface GetTeamsQueryDTO {
   pageNumber?: number;
   pageSize?: number;
 }
+
+export interface CreateTeamDTO {
+  name: string;
+  description?: string | null;
+  isPrivate: boolean;
+}
+
+export interface UpdateTeamDTO {
+  name: string;
+  description?: string | null;
+}
 //#endregion
 
 //#region Value Objects

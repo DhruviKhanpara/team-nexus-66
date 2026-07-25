@@ -10,6 +10,8 @@ import type {
   TeamDetailDTO,
   TeamsListDTO,
   GetTeamsQueryDTO,
+  CreateTeamDTO,
+  UpdateTeamDTO,
 } from "@/types/team";
 
 interface GetTeamsArgs {
@@ -20,6 +22,17 @@ interface GetTeamsArgs {
 interface GetTeamArgs {
   orgId: string;
   teamId: string;
+}
+
+interface CreateTeamArgs {
+  orgId: string;
+  body: CreateTeamDTO;
+}
+
+interface UpdateTeamArgs {
+  orgId: string;
+  teamId: string;
+  body: UpdateTeamDTO;
 }
 
 const buildTeamsQueryString = (query: GetTeamsQueryDTO = {}): string => {
@@ -55,7 +68,35 @@ export const teamApi = baseApi.injectEndpoints({
         { type: TAGS.TEAMS, id: teamId },
       ],
     }),
+
+    createTeam: build.mutation<void, CreateTeamArgs>({
+      query: ({ orgId, body }) => ({
+        url: `/orgs/${orgId}/teams`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_res, _err, { orgId }) => [
+        { type: TAGS.TEAMS, id: orgId },
+      ],
+    }),
+
+    updateTeam: build.mutation<void, UpdateTeamArgs>({
+      query: ({ orgId, teamId, body }) => ({
+        url: `/orgs/${orgId}/teams/${teamId}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_res, _err, { orgId, teamId }) => [
+        { type: TAGS.TEAMS, id: orgId },
+        { type: TAGS.TEAMS, id: teamId },
+      ],
+    }),
   }),
 });
 
-export const { useGetTeamsQuery, useGetTeamQuery } = teamApi;
+export const {
+  useGetTeamsQuery,
+  useGetTeamQuery,
+  useCreateTeamMutation,
+  useUpdateTeamMutation,
+} = teamApi;
