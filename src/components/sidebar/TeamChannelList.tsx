@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { ChevronRight, Hash, Megaphone, Lock, Plus } from 'lucide-react';
+import { ChevronRight, Hash, Megaphone, Lock, Plus, Pencil } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/app/store';
 import { setActiveChatContext } from '@/features/uiSlice';
 import { channels } from '@/data/mockData';
 import { useHydrateTeams } from '@/domain/team';
 import type { TeamSummaryVO } from '@/types/team';
+import CreateTeamDialog from '@/components/team/CreateTeamDialog';
+import EditTeamDialog from '@/components/team/EditTeamDialog';
 
 const TeamChannelList = () => {
   const { activeChatContext, searchQuery } = useAppSelector(s => s.ui);
@@ -21,6 +23,8 @@ const TeamChannelList = () => {
     : [];
 
   const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
+  const [createTeamOpen, setCreateTeamOpen] = useState(false);
+  const [editTeam, setEditTeam] = useState<TeamSummaryVO | null>(null);
 
   const toggleTeam = (teamId: string) => {
     setExpandedTeams(prev => ({ ...prev, [teamId]: !(prev[teamId] ?? true) }));
