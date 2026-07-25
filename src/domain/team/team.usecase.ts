@@ -4,14 +4,20 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 import { useAppDispatch } from "@/app/store";
-import { useGetTeamsQuery, useGetTeamQuery } from "@/api/teamApi";
+import {
+  useGetTeamsQuery,
+  useGetTeamQuery,
+  useCreateTeamMutation,
+  useUpdateTeamMutation,
+} from "@/api/teamApi";
 import { mapTeamsListDtoToVO, mapTeamDetailDtoToVO } from "./team.mapper";
 import { setTeamsForOrg, setSelectedTeamId } from "@/features/teamSlice";
-import type { GetTeamsQueryVO } from "@/types/team";
+import type {
+  GetTeamsQueryVO,
+  CreateTeamDTO,
+  UpdateTeamDTO,
+} from "@/types/team";
 
-/**
- * Hydrate paginated teams for an organization and push summaries into Redux.
- */
 const useHydrateTeams = (orgId: string | null, query?: GetTeamsQueryVO) => {
   const { data, isLoading, isFetching } = useGetTeamsQuery(
     { orgId: orgId as string, query },
@@ -33,9 +39,6 @@ const useHydrateTeams = (orgId: string | null, query?: GetTeamsQueryVO) => {
   return { teamsList, isLoading, isFetching };
 };
 
-/**
- * Hydrate a single team detail.
- */
 const useHydrateTeam = (orgId: string | null, teamId: string | null) => {
   const { data, isLoading, isFetching } = useGetTeamQuery(
     { orgId: orgId as string, teamId: teamId as string },
@@ -50,9 +53,6 @@ const useHydrateTeam = (orgId: string | null, teamId: string | null) => {
   return { team, isLoading, isFetching };
 };
 
-/**
- * Returns a callback to set the currently selected team.
- */
 const useSelectTeam = () => {
   const dispatch = useAppDispatch();
 
@@ -64,4 +64,44 @@ const useSelectTeam = () => {
   );
 };
 
-export { useHydrateTeams, useHydrateTeam, useSelectTeam };
+const usePersistCreateTeam = () => {
+  const [createMutation, { isLoading, isSuccess }] = useCreateTeamMutation();
+
+  const createTeam = useCallback(
+    async (args: { orgId: string; body: CreateTeamDTO }) => {
+      try {
+        await createMutation(args).unwrap();
+      } catch {
+        /* errors toasted in baseApi */
+      }
+    },
+    [createMutation],
+  );
+
+  return { createTeam, isLoading, isSuccess };
+};
+
+const usePersistUpdateTeam = () => {
+  const [updateMutation, { isLoading, isSuccess }] = useUpdateTeamMutation();
+
+  const updateTeam = useCallback(
+    async (args: { orgId: string; teamId: string; body: UpdateTeamDTO }) => {
+      try {
+        await updateMutation(args).unwrap();
+      } catch {
+        /* errors toasted in baseApi */
+      }
+    },
+    [updateMutation],
+  );
+
+  return { updateTeam, isLoading, isSuccess };
+};
+
+export {
+  useHydrateTeams,
+  useHydrateTeam,
+  useSelectTeam,
+  usePersistCreateTeam,
+  usePersistUpdateTeam,
+};

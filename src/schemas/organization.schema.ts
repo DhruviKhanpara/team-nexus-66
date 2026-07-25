@@ -22,7 +22,16 @@ const createOrganizationSchema = z.object({
     }),
 });
 
-type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
+const updateOrganizationSchema = z.object({
+  name: z
+    .string({ required_error: "Organization name is required." })
+    .min(1, "Organization name cannot be empty.")
+    .max(100, "Organization name cannot exceed 100 characters.")
+    .trim(),
+});
 
-export { createOrganizationSchema };
-export type { CreateOrganizationFormData };
+type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
+type UpdateOrganizationFormData = z.infer<typeof updateOrganizationSchema>;
+
+export { createOrganizationSchema, updateOrganizationSchema };
+export type { CreateOrganizationFormData, UpdateOrganizationFormData };

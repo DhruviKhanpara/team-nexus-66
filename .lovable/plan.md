@@ -1,122 +1,97 @@
-## Phase 1 — Organizations & Teams (mirror auth architecture)
+# Phase 2 — Workspace Management: Completion Plan
 
-Found the team files this time: `routes/team.routes.js`, `controllers/team.controller.js`, `validators/team.validators.js`, and they are mounted at `/orgs/:orgId/teams` from `organization.routes.js`. Plan derived from actual controllers + services.
+The foundational Org/Team stack is already in place (types, API, mappers, use-cases, slices, `TeamChannelList` wiring, `selectedOrgId` persistence). This plan finishes the remaining Phase 2 work: bootstrapping, org switcher UI, create/edit flows for both orgs and teams, and cache invalidation.
 
-### Backend contract (source of truth)
+## 1. API layer — add mutations
 
-**Endpoints implemented in this phase**
-- `GET /orgs/my` → list of orgs the user belongs to
-- `GET /orgs/:orgId` → single org details
-- `GET /orgs/:orgId/teams` → paginated teams (query: `search`, `isArchived`, `includePrivate`, `pageNumber`, `pageSize`)
-- `GET /orgs/:orgId/teams/:teamId` → single team details
+**`src/api/organizationApi.ts`**
+- `createOrganization` mutation → `POST /orgs`, body `{ name, slug }`. `invalidatesTags: [TAGS.ORGANIZATIONS]`.
+- `updateOrganization` mutation → `PUT /orgs/:orgId`, body `{ name }`. Invalidates `{ type: ORGANIZATIONS, id: orgId }` and the list tag.
 
-**Response shapes (from `organization.service.js` / `team.service.js`)**
+**`src/api/teamApi.ts`**
+- `createTeam` mutation → `POST /orgs/:orgId/teams`, body `{ name, description?, isPrivate }`. Invalidates `{ type: TEAMS, id: orgId }`.
+- `updateTeam` mutation → `PUT /orgs/:orgId/teams/:teamId`, body `{ name, description? }`. Invalidates the list and the single-team tag.
 
-`GET /orgs/my` → `Array<{ id, name, slug, iconUrl, createdAt, role, joinedAt }>`
+## 2. Zod schemas
 
-`GET /orgs/:orgId` → `{ id, name, slug, iconUrl, createdAt }`
+**`src/schemas/organization.schema.ts`** — extend with:
+- `updateOrganizationSchema` (just `name`, same rules as create).
 
-`GET /orgs/:orgId/teams` → paginated: `{ data: Team[], totalCount, pageNumber, pageSize, totalPages, hasNextPage, hasPreviousPage }` where each `Team` is
-`{ id, orgId, name, description, icon (url|null), isPrivate, isArchived, archivedAt, createdAt, memberCount, role, isMuted, joinedAt }`
+**`src/schemas/team.schema.ts`** — add:
+- `createTeamSchema`: `name` (1..100, trimmed), `description` (max 1024, nullable/optional), `isPrivate` (boolean, default false).
+- `updateTeamSchema`: `name`, `description` (no `isPrivate`).
 
-`GET /orgs/:orgId/teams/:teamId` → `{ id, orgId, name, description, icon ({url,publicId}|null), isPrivate, isArchived, archivedAt, createdAt, memberCount }`
+Rules mirror the backend validators verbatim.
 
-**Backend quirk to flag (do not fix in frontend):** `team.controller.js` calls `sendResponse(res, 200, result, "...")` — the result lands in the `exceptionCode` slot of the envelope, so `result` in the JSON body will be `null`. The frontend will still consume the documented `result` field (matches every other endpoint and the `sendResponse` signature). I'll flag this in chat after the plan so the server can fix the controller; without that fix the team API responses won't deserialize correctly. No frontend workaround.
+## 3. Domain use-case hooks
 
-### File layout (mirrors auth exactly)
+**`src/domain/organization/organization.usecase.ts`** — add:
+- `usePersistCreateOrganization()` → wraps RTK mutation; on success also calls `setSelectedOrgId(newOrg.id)` so the newly created org becomes active. Returns `{ createOrganization, isLoading, isSuccess, data }`.
+- `usePersistUpdateOrganization()` → returns `{ updateOrganization, isLoading, isSuccess }`.
 
-```text
-src/types/organization.ts          # DTOs + VOs (replaces existing mock-shaped file)
-src/types/team.ts                  # DTOs + VOs
-src/api/organizationApi.ts         # RTK Query endpoints
-src/api/teamApi.ts                 # RTK Query endpoints
-src/schemas/organization.schema.ts # zod (createOrganizationSchema only — only one used in phase 1)
-src/schemas/team.schema.ts         # zod (getTeamsSchema query — only one used in phase 1)
-src/domain/organization/organization.mapper.ts
-src/domain/organization/organization.usecase.ts
-src/domain/organization/index.ts
-src/domain/team/team.mapper.ts
-src/domain/team/team.usecase.ts
-src/domain/team/index.ts
-src/features/organizationSlice.ts  # { selectedOrgId, organizations: OrgSummaryVO[] }
-src/features/teamSlice.ts          # { teamsByOrgId: Record<orgId, TeamSummaryVO[]>, selectedTeamId }
-```
+**`src/domain/team/team.usecase.ts`** — add:
+- `usePersistCreateTeam()` and `usePersistUpdateTeam()` mirroring the auth pattern (async try/catch, expose `isLoading`/`isSuccess`).
 
-Also:
-- Register new slices in `src/app/store.ts`.
-- Add `Organizations`, `Teams` already exist in `src/api/tags.ts` — reuse.
-- Update `src/types/index.ts` re-exports.
-- Update `src/components/sidebar/TeamChannelList.tsx` to consume Redux VOs instead of `teams` from mockData; channels keep using mockData.
-- `src/features/authSlice.clearAuth` will also reset org+team slices (via extraReducers in each slice listening to `clearAuth`) so logout/session-expiry clears workspace state.
+Barrels in `src/domain/organization/index.ts` and `src/domain/team/index.ts` already re-export usecase files, so no barrel edits needed.
 
-### DTO / VO design (suffix convention from `user.ts`)
+## 4. Bootstrap hydration
 
-`types/organization.ts`
-- `OrgSummaryDTO` (item from `/orgs/my`), `OrgDetailDTO` (`/orgs/:orgId`)
-- `OrgSummaryVO`, `OrgDetailVO` (camelCase mirrors, `createdAt: string`)
+**`src/components/layout/AppLayout.tsx`**
+- Call `useHydrateMyOrganizations()` at the top of `AppLayout` so the org list loads as soon as the authenticated shell mounts.
+- After hydration, if `selectedOrgId` is `null` and the list is non-empty, auto-select the first org (dispatch via `useSelectOrganization`). Reconciliation of a stale persisted id is already handled inside the hook.
 
-`types/team.ts`
-- `TeamSummaryDTO` (item from teams list), `TeamDetailDTO`, plus shared `PaginatedDTO<T>` (or local `TeamsListDTO`)
-- `TeamSummaryVO`, `TeamDetailVO`, `TeamsListVO`
+## 5. Org switcher UI in `NavRail`
 
-Mappers convert every DTO → VO; nothing else stores DTOs.
+Replace the hardcoded "Acme Corporation" popover in **`src/components/layout/NavRail.tsx`** with a real switcher backed by Redux:
 
-### Use case hooks (mirrors `useHydrateMe` / auth pattern)
+- Trigger button shows the initials/icon of the currently selected org (from `state.organization.organizations` + `selectedOrgId`).
+- Popover content:
+  - Header: selected org name + slug (`slug.teams.com` styling preserved) and icon.
+  - "Switch organization" section: list every org from Redux; clicking one dispatches `setSelectedOrgId` via `useSelectOrganization`. The active org gets a check indicator.
+  - Footer action: "Create organization" → opens `CreateOrganizationDialog`.
+  - "Organization settings" → opens `EditOrganizationDialog` (populated with current org's name).
+- Remove the plan/members static copy or replace with `memberCount`/derived data only if available; otherwise drop it.
 
-`organization.usecase.ts`
-- `useHydrateMyOrganizations()` — calls query, maps DTO→VO, `dispatch(setOrganizations(vos))`, returns `{ organizations, isLoading }`.
-- `useHydrateOrganization(orgId)` — single org detail, returns `{ organization, isLoading }`.
-- `useSelectOrganization()` — returns `(orgId) => dispatch(setSelectedOrgId(orgId))`.
+## 6. Create / Edit Organization dialogs
 
-`team.usecase.ts`
-- `useHydrateTeams(orgId, query?)` — fetches paginated teams for an org, maps, `dispatch(setTeamsForOrg({ orgId, teams }))`.
-- `useHydrateTeam(orgId, teamId)` — detail.
-- `useSelectTeam()` — `(teamId) => dispatch(setSelectedTeamId(teamId))`.
+New files:
+- **`src/components/organization/CreateOrganizationDialog.tsx`** — controlled shadcn `Dialog` with `react-hook-form` + `zodResolver(createOrganizationSchema)`. Uses `TextField` for name and slug. On submit calls `usePersistCreateOrganization`. Closes on `isSuccess`. Success toast comes from `baseApi` automatically.
+- **`src/components/organization/EditOrganizationDialog.tsx`** — same pattern using `updateOrganizationSchema`; pre-fills `name` from the currently selected org.
 
-All async hooks follow the auth pattern: `async/await + .unwrap()` inside `try/catch`, errors swallowed (baseApi toasts).
+Both dialogs receive `open`/`onOpenChange` props and are rendered from `NavRail`.
 
-### Redux slices
+## 7. Create / Edit Team dialogs + sidebar integration
 
-`organizationSlice`
-- state: `{ organizations: OrgSummaryVO[]; selectedOrgId: string | null }`
-- reducers: `setOrganizations`, `setSelectedOrgId`, `clearOrganizations`
-- `extraReducers`: on `clearAuth` → reset to initial.
-- Initial `selectedOrgId` read from `localStorage.getItem("selectedOrgId")`.
-- A tiny middleware (or `setSelectedOrgId` reducer itself) writes/removes the key in `localStorage`. Only `selectedOrgId` is persisted.
+New files:
+- **`src/components/team/CreateTeamDialog.tsx`** — form fields: `name` (TextField), `description` (TextareaField), `isPrivate` (SwitchField). Calls `usePersistCreateTeam` with `selectedOrgId`.
+- **`src/components/team/EditTeamDialog.tsx`** — same minus `isPrivate`, pre-filled from a `TeamSummaryVO`.
 
-`teamSlice`
-- state: `{ teamsByOrgId: Record<string, TeamSummaryVO[]>; selectedTeamId: string | null }`
-- reducers: `setTeamsForOrg`, `setSelectedTeamId`, `clearTeams`
-- `extraReducers`: on `clearAuth` → reset; on `setSelectedOrgId` → clear `selectedTeamId`.
+**`src/components/sidebar/TeamChannelList.tsx`**
+- Header row above the team list with "Teams" label and a "+" button that opens `CreateTeamDialog`.
+- The existing per-team "+" button (currently unwired) opens `EditTeamDialog` for that team (or is removed — it currently suggests "add channel" which belongs to Phase 3; keep it visually but leave a `TODO(phase-3)` comment and no-op).
+- Continue reading teams from `state.team.teamsByOrgId[selectedOrgId]`.
 
-Only VOs live in Redux. Lists fetched via RTK Query stay cached in `baseApi` too.
+## 8. Mock data cleanup
 
-### Persisted selectedOrgId reconciliation
+- Confirm no component still imports mock orgs/teams. Current audit shows only `TeamChannelList` referenced `channels` (Phase 3 scope) and `NavRail` referenced `mockNotifications` (out of scope). Leave those untouched — Phase 2 does not own channels or notifications.
+- No changes to `src/data/mockData.ts` in this phase beyond what's above.
 
-In `App.tsx` (or a small `useReconcileSelectedOrg` hook called once after `useHydrateMyOrganizations`):
-1. After organizations load, if `selectedOrgId` exists and is NOT in the list → `dispatch(setSelectedOrgId(null))` (also clears localStorage via reducer).
-2. Do NOT auto-pick the first org.
+## 9. Verification
 
-### Sidebar integration
+- `tsgo` clean.
+- Manual walkthrough:
+  1. Log in → org list loads, first org auto-selected, teams appear in sidebar.
+  2. Switch org via popover → sidebar teams update, `selectedTeamId` clears (already handled by slice).
+  3. Reload → previously selected org restored from `localStorage`.
+  4. Create org → new org becomes selected and appears in switcher.
+  5. Edit org name → header + switcher reflect change.
+  6. Create team → appears in sidebar for current org.
+  7. Edit team name → sidebar updates.
+  8. Logout → org + team slices reset (already wired via `clearAuth`).
 
-`TeamChannelList.tsx`:
-- Replace `teams` import from mockData with `useAppSelector` reading `organizationSlice.selectedOrgId` and `teamSlice.teamsByOrgId[selectedOrgId]`.
-- Call `useHydrateTeams(selectedOrgId)` when `selectedOrgId` is set.
-- If `selectedOrgId == null`, render an empty state ("Select an organization") — no auto-selection.
-- Channels list inside each team continues using `channels` from mockData (filtered by `team.id` VO field — note rename from `_id` to `id`).
+## Technical notes
 
-Org picker UI is not in scope for phase 1; selection can be exercised manually via the existing surfaces (or a follow-up task). The persistence/reconciliation logic is complete and ready for whatever picker is added next.
-
-### Out of scope (explicit)
-
-- No changes to auth files, login/register pages, baseApi behavior.
-- No channel API, messaging, sockets, presence, typing.
-- No mutations for org/team in phase 1 (the auth-mirroring file shells exist but only `GET` endpoints are wired). Schemas for create/update can be added when those mutations are implemented in a later phase.
-- No removal of channel mock data.
-
-### Acceptance check
-
-- `bun` typecheck passes; no `any`.
-- Sidebar renders teams from API for the selected org; refreshing the page restores selection if still valid, clears it if not.
-- Redux DevTools shows only VOs in `organization` and `team` slices.
-- `localStorage` contains only `selectedOrgId` (plus pre-existing `theme`).
+- All mutations rely on the existing global toast + refresh behaviour in `baseApi.ts`; no per-call `try/catch` needed inside components — the use-case hooks own it.
+- Cache invalidation uses tag ids so unrelated orgs' team lists aren't refetched.
+- Dialog state stays local to `NavRail` / `TeamChannelList`; no new Redux surface is introduced for modals.
+- No `_id` usage — everything goes through the `id`/VO shape defined in `src/types/organization.ts` and `src/types/team.ts`.

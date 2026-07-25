@@ -27,6 +27,19 @@ export interface OrgDetailDTO {
   iconUrl: string | null;
   createdAt: string;
 }
+
+export interface CreateOrgDTO {
+  name: string;
+  slug: string;
+}
+
+export interface CreateOrgResultDTO {
+  org: { _id: string; name: string; slug: string };
+}
+
+export interface UpdateOrgDTO {
+  name: string;
+}
 //#endregion
 
 //#region Value Objects

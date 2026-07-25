@@ -13,32 +13,49 @@ import {
 } from "@/components/ui/tooltip";
 import { notifications as mockNotifications } from "@/data/mockData";
 import { usePersistLogout } from "@/domain/auth";
+import {
+  useSelectOrganization,
+} from "@/domain/organization";
 import { setActiveNav, toggleTheme } from "@/features/uiSlice";
 import { NAV_ITEMS } from "@/lib/constants";
 import { getInitials } from "@/lib/helpers";
 import type { NavSection } from "@/types";
 import {
-  Building2,
+  Check,
   ChevronRight,
   LogOut,
   Moon,
   Palette,
+  Plus,
   Settings,
-  Shield,
   Sun,
   User,
-  Users,
 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import CreateOrganizationDialog from "@/components/organization/CreateOrganizationDialog";
+import EditOrganizationDialog from "@/components/organization/EditOrganizationDialog";
 
 const NavRail = () => {
   const { activeNav, theme } = useAppSelector((s) => s.ui);
   const user = useAppSelector((s) => s.auth.user);
+  const organizations = useAppSelector((s) => s.organization.organizations);
+  const selectedOrgId = useAppSelector(
+    (s) => s.organization.selectedOrgId,
+  );
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const selectOrganization = useSelectOrganization();
 
   const { logout } = usePersistLogout();
+
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
+  const [editOrgOpen, setEditOrgOpen] = useState(false);
+
+  const selectedOrg = useMemo(
+    () => organizations.find((o) => o.id === selectedOrgId) ?? null,
+    [organizations, selectedOrgId],
+  );
 
   const unreadNotifCount = mockNotifications.filter((n) => !n.isRead).length;
 
@@ -63,7 +80,7 @@ const NavRail = () => {
       className="h-full w-[68px] flex flex-col items-center py-3 gap-1"
       style={{ background: "hsl(var(--sidebar-rail))" }}
     >
-      {/* Organization logo popover */}
+      {/* Organization switcher */}
       <div className="mb-4 mt-1">
         <Popover>
           <PopoverTrigger asChild>
@@ -74,58 +91,96 @@ const NavRail = () => {
                 color: "hsl(var(--primary-foreground))",
               }}
             >
-              AC
+              {selectedOrg ? getInitials(selectedOrg.name) : "?"}
             </button>
           </PopoverTrigger>
           <PopoverContent side="right" align="start" className="w-72 p-0">
             <div className="p-4">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm bg-primary text-primary-foreground">
-                  AC
+              {selectedOrg ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm bg-primary text-primary-foreground">
+                    {getInitials(selectedOrg.name)}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-sm text-foreground truncate">
+                      {selectedOrg.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {selectedOrg.slug}.teams.com
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-sm text-foreground">
-                    Acme Corporation
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    acme-corp.teams.com
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No organization selected.
+                </p>
+              )}
+            </div>
+            <Separator />
+            {organizations.length > 0 && (
+              <>
+                <div className="p-1 max-h-64 overflow-y-auto">
+                  <p className="px-3 pt-1 pb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Switch organization
                   </p>
+                  {organizations.map((org) => {
+                    const isActive = org.id === selectedOrgId;
+                    return (
+                      <button
+                        key={org.id}
+                        onClick={() => selectOrganization(org.id)}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent text-foreground transition-colors"
+                      >
+                        <div className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold bg-primary/10 text-primary">
+                          {getInitials(org.name)}
+                        </div>
+                        <span className="flex-1 truncate text-left">
+                          {org.name}
+                        </span>
+                        {isActive && (
+                          <Check className="w-4 h-4 text-primary" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-            </div>
-            <Separator />
+                <Separator />
+              </>
+            )}
             <div className="p-1">
-              <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent text-foreground transition-colors">
-                <Building2 className="w-4 h-4 text-muted-foreground" />
-                <span>Organization settings</span>
-                <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground" />
+              {selectedOrg && (
+                <button
+                  onClick={() => setEditOrgOpen(true)}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent text-foreground transition-colors"
+                >
+                  <Settings className="w-4 h-4 text-muted-foreground" />
+                  <span>Organization settings</span>
+                  <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground" />
+                </button>
+              )}
+              <button
+                onClick={() => setCreateOrgOpen(true)}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent text-foreground transition-colors"
+              >
+                <Plus className="w-4 h-4 text-muted-foreground" />
+                <span>Create organization</span>
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent text-foreground transition-colors">
-                <Users className="w-4 h-4 text-muted-foreground" />
-                <span>Manage members</span>
-                <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground" />
-              </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-accent text-foreground transition-colors">
-                <Shield className="w-4 h-4 text-muted-foreground" />
-                <span>Security & compliance</span>
-                <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground" />
-              </button>
-            </div>
-            <Separator />
-            <div className="p-3">
-              <p className="text-[11px] text-muted-foreground">
-                Plan:{" "}
-                <span className="font-medium text-foreground">
-                  Business Premium
-                </span>
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                12 members · 3 teams
-              </p>
             </div>
           </PopoverContent>
         </Popover>
       </div>
+
+      <CreateOrganizationDialog
+        open={createOrgOpen}
+        onOpenChange={setCreateOrgOpen}
+      />
+      {selectedOrg && (
+        <EditOrganizationDialog
+          open={editOrgOpen}
+          onOpenChange={setEditOrgOpen}
+          organization={selectedOrg}
+        />
+      )}
 
       {/* Nav items */}
       <div className="flex flex-col gap-0.5 flex-1">

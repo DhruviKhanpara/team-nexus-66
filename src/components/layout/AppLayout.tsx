@@ -7,10 +7,14 @@ import ThreadPanel from '@/components/chat/ThreadPanel';
 import { Menu } from 'lucide-react';
 import { useAppDispatch } from '@/app/store';
 import { toggleMobileSidebar } from '@/features/uiSlice';
+import { useHydrateMyOrganizations } from '@/domain/organization';
 
 const AppLayout = () => {
   const { theme, isSidePanelOpen, activeThreadId, isMobileSidebarOpen, activeChatContext } = useAppSelector(s => s.ui);
   const dispatch = useAppDispatch();
+
+  // Bootstrap the workspace: load user's organizations once authenticated.
+  useHydrateMyOrganizations();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
