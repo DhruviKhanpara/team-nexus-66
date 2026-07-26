@@ -1,9 +1,10 @@
 import { useAppSelector } from '@/app/store';
-import TeamChannelList from '@/components/sidebar/TeamChannelList';
+import SidebarHeader from '@/components/sidebar/SidebarHeader';
+import SidebarContent from '@/components/sidebar/SidebarContent';
+import TeamSection from '@/components/sidebar/team/TeamSection';
 import ConversationList from '@/components/sidebar/ConversationList';
 import ActivityFeed from '@/components/sidebar/ActivityFeed';
 import NotificationList from '@/components/sidebar/NotificationList';
-import SearchBar from '@/components/sidebar/SearchBar';
 import { SIDE_PANEL_TITLES } from '@/lib/constants';
 
 const SidePanel = () => {
@@ -11,19 +12,14 @@ const SidePanel = () => {
 
   return (
     <aside className="h-full w-[300px] border-r border-border bg-sidebar flex flex-col">
-      {/* Header */}
-      <div className="p-4 pb-2">
-        <h2 className="text-lg font-semibold text-sidebar-foreground">{SIDE_PANEL_TITLES[activeNav]}</h2>
-        <SearchBar />
-      </div>
+      <SidebarHeader title={SIDE_PANEL_TITLES[activeNav]} />
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
-        {activeNav === 'teams' && <TeamChannelList />}
+      <SidebarContent>
+        {activeNav === 'teams' && <TeamSection />}
         {activeNav === 'chat' && <ConversationList />}
         {activeNav === 'activity' && <ActivityFeed />}
         {activeNav === 'notifications' && <NotificationList />}
-      </div>
+      </SidebarContent>
     </aside>
   );
 };
