@@ -8,13 +8,19 @@ import { Menu } from 'lucide-react';
 import { useAppDispatch } from '@/app/store';
 import { toggleMobileSidebar } from '@/features/uiSlice';
 import { useHydrateMyOrganizations } from '@/domain/organization';
+import { useHydrateTeams } from '@/domain/team';
+import { selectSelectedOrgId } from '@/features/selectors';
 
 const AppLayout = () => {
   const { theme, isSidePanelOpen, activeThreadId, isMobileSidebarOpen, activeChatContext } = useAppSelector(s => s.ui);
   const dispatch = useAppDispatch();
+  const selectedOrgId = useAppSelector(selectSelectedOrgId);
 
-  // Bootstrap the workspace: load user's organizations once authenticated.
+  // Bootstrap the workspace: load organizations, then the selected org's teams.
+  // Data synchronization lives here, not inside the sidebar's rendering tree.
   useHydrateMyOrganizations();
+  useHydrateTeams(selectedOrgId);
+
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
