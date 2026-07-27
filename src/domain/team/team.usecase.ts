@@ -3,7 +3,7 @@
  */
 
 import { useCallback, useEffect, useMemo } from "react";
-import { useAppDispatch } from "@/app/store";
+import { useAppDispatch, useAppSelector } from "@/app/store";
 import {
   useGetTeamsQuery,
   useGetTeamQuery,
@@ -24,6 +24,7 @@ const useHydrateTeams = (orgId: string | null, query?: GetTeamsQueryVO) => {
     { skip: !orgId },
   );
   const dispatch = useAppDispatch();
+  const selectedTeamId = useAppSelector((s) => s.team.selectedTeamId);
 
   const teamsList = useMemo(
     () => (data ? mapTeamsListDtoToVO(data) : null),
@@ -35,6 +36,18 @@ const useHydrateTeams = (orgId: string | null, query?: GetTeamsQueryVO) => {
       dispatch(setTeamsForOrg({ orgId, teams: teamsList.data }));
     }
   }, [orgId, teamsList, dispatch]);
+
+  // Reconcile persisted selectedTeamId; auto-select first if none set.
+  useEffect(() => {
+    if (!teamsList) return;
+    const teams = teamsList.data;
+
+    if (selectedTeamId && !teams.some((t) => t.id === selectedTeamId)) {
+      dispatch(setSelectedTeamId(teams[0]?.id ?? null));
+    } else if (!selectedTeamId && teams.length > 0) {
+      dispatch(setSelectedTeamId(teams[0].id));
+    }
+  }, [teamsList, selectedTeamId, dispatch]);
 
   return { teamsList, isLoading, isFetching };
 };
