@@ -1,59 +1,57 @@
-## Goal
+## Phase 3 — Channel Domain & Complete Workspace Hierarchy
 
-Restructure the sidebar into small, reusable, data-agnostic components so Channels, DMs and a future Workspace abstraction can be added without another refactor. No visual, behavioural, API, Redux-shape or DTO/VO changes.
+Backend verified from `server-6.zip`: channels are mounted at `/orgs/:orgId/teams/:teamId/channels`.
 
-## Current state (verified by reading the code)
+### Backend endpoints to integrate
 
-- `SidePanel.tsx` renders a header (title + `SearchBar`) and switches content on `ui.activeNav` between `TeamChannelList`, `ConversationList`, `ActivityFeed`, `NotificationList`.
-- `TeamChannelList.tsx` is the God component: it calls `useHydrateTeams(selectedOrgId)` (data fetching), reads three Redux slices inline, filters teams and channels by `ui.searchQuery`, owns expansion state, renders team rows, renders mock channel rows from `data/mockData`, renders the edit/create actions, and hosts both team dialogs.
-- `NavRail.tsx` contains the organization switcher popover inline (selected org header, switch list, settings/create entry points, dialogs) alongside nav items, theme toggle, logout and the user popover.
-- Components read Redux via inline `useAppSelector(s => s.x.y)`; there is no selectors module.
+| Method | Path | Body / Query | Result |
+|---|---|---|---|
+| GET | `/channels` | `search`, `isArchived`, `includePrivate`, `pageNumber`, `pageSize` | paginated channel summaries |
+| GET | `/channels/:channelId` | — | channel detail |
+| POST | `/channels` | `name`, `description?`, `type?` (`text`\|`announcement`), `isPrivate?` | `result: null` |
+| PUT | `/channels/:channelId` | `name`, `description?` | `result: null` |
+| POST | `/channels/:channelId/archive` | — | `result: null` |
+| POST | `/channels/:channelId/unarchive` | — | `result: null` |
 
-## Plan
+Members endpoints exist but are out of scope for this phase (no UI, not wired).
 
-### 1. Sidebar primitives (`src/components/sidebar/primitives/`)
-Generic, data-agnostic, no domain knowledge — reused later by Channels/DMs:
-- `SidebarSection.tsx` — section wrapper with uppercase label + optional action slot (extracted from the current "Teams" header markup).
-- `SidebarGroup.tsx` — collapsible group: chevron, leading slot, label, hover action slot, children; `expanded` + `onToggle` via props (used by TeamItem today).
-- `SidebarItem.tsx` — single row: icon, label, active state, unread indicator (dot or count), `onClick`.
-- `SidebarEmptyState.tsx` — generic message row ("No teams found.", "Select an organization…", later "No channels").
-- `index.ts` barrel.
-All existing Tailwind class strings are copied verbatim so rendering is pixel-identical.
+Channel summary DTO (from `channel.service.js`): `id, orgId, teamId, name, description, type, isPrivate, isArchived, archivedAt, createdAt, memberCount, role, isMuted, joinedAt, unreadCount, mentionCount`. Detail DTO omits the caller-specific fields.
 
-### 2. Team section (`src/components/sidebar/team/`)
-- `TeamSection.tsx` (container): reads teams for the selected org + search query from selectors, applies the existing filter, owns `expandedTeams` / dialog-open local state, renders `SidebarSection` + `TeamList` + create/edit dialogs. Does **not** fetch.
-- `TeamList.tsx` (presentation): receives `teams`, `expandedTeamIds`, callbacks; maps to `TeamItem`.
-- `TeamItem.tsx` (presentation): renders one team via `SidebarGroup`, with a `TeamActions` element in the action slot and `children` for whatever section is nested under a team.
-- `TeamActions.tsx`: the hover pencil (edit) button; extensible with more actions.
-- `CreateTeamButton.tsx`: the `+` button in the section header.
+### Files to add (mirroring the Team module exactly)
 
-### 3. Channel section (`src/components/sidebar/channel/`)
-- `ChannelSection.tsx` (container): takes `teamId` + `searchQuery`, reads the mock `channels` array (unchanged), filters as today, renders `ChannelList`; selection dispatch stays as-is (`setActiveChatContext`).
-- `ChannelList.tsx` / `ChannelItem.tsx` (presentation): render channel rows through `SidebarItem`, keeping the announcement/lock/hash icon logic and unread dot.
-- `CreateChannelButton.tsx`: rendered only if trivially non-intrusive; otherwise omitted to avoid adding UI (default: **omit**, since it would change visuals).
-`ChannelSection` is composed *inside* `TeamItem`'s children by `TeamList`, so team rendering no longer knows about channels; a future Channels API swap touches only this folder.
+- `src/types/channel.ts` — `ChannelSummaryDTO/VO`, `ChannelDetailDTO/VO`, `ChannelsListDTO/VO` (reusing `PaginatedDTO/VO`), `GetChannelsQueryDTO/VO`, `CreateChannelDTO`, `UpdateChannelDTO`, `ChannelType`
+- `src/api/channelApi.ts` — the six endpoints above with `TAGS.CHANNELS` providing/invalidating by teamId and channelId
+- `src/domain/channel/channel.mapper.ts`, `channel.usecase.ts`, `index.ts` — `useHydrateChannels`, `useHydrateChannel`, `useSelectChannel`, `usePersistCreateChannel`, `usePersistUpdateChannel`, `usePersistArchiveChannel`, `usePersistUnarchiveChannel`
+- `src/features/channelSlice.ts` — `channelsByTeamId: Record<string, ChannelSummaryVO[]>`, `selectedChannelId`; resets on `clearAuth`, clears selection on `setSelectedOrgId` / `setSelectedTeamId`
+- `src/schemas/channel.schema.ts` — Zod create/update/query schemas mirroring `channel.validators.js` (name 1–100, description ≤500, type enum, isPrivate boolean)
+- `src/components/channel/CreateChannelDialog.tsx`, `EditChannelDialog.tsx` — same structure as the team dialogs (react-hook-form + form fields)
+- `src/components/sidebar/channel/CreateChannelButton.tsx`, `ChannelActions.tsx` — mirroring the team equivalents
 
-### 4. Organization switcher (`src/components/sidebar/organization/OrganizationSwitcher.tsx`)
-Move the org popover block out of `NavRail` verbatim (trigger button, popover content, switch list, settings/create buttons, both org dialogs). `NavRail` renders `<OrganizationSwitcher />` in the same slot; nav items, theme, logout and user popover stay in `NavRail`.
+### Files to change
 
-### 5. Sidebar shell
-- `SidePanel.tsx` keeps its role but delegates its header markup to a new `SidebarHeader.tsx` (title + `SearchBar`) and the scroll area to `SidebarContent.tsx`. `SidebarFooter.tsx` only if there is real content — there is none today, so it is **not** created (no empty wrappers).
-- `TeamChannelList.tsx` is replaced by `TeamSection` and deleted; `SidePanel` renders `TeamSection` for `activeNav === 'teams'`.
+- `src/features/teamSlice.ts` — persist `selectedTeamId` to localStorage using the same read/write helper pattern as `organizationSlice`
+- `src/features/selectors.ts` — add channel selectors plus `selectCurrentOrganization`, `selectCurrentTeam`, `selectCurrentChannel`, and derived `selectCurrentWorkspace` returning `{ organization, team, channel }`
+- `src/api/tags.ts` — already has `CHANNELS`; no change expected
+- `src/app/store.ts` — register `channel` reducer
+- `src/components/layout/AppLayout.tsx` — add `useHydrateChannels(selectedOrgId, selectedTeamId)` next to the existing org/team hydration
+- `src/components/sidebar/channel/ChannelSection.tsx` — drop `mockChannels`; read channels from Redux via selectors, dispatch `setSelectedChannelId` (plus the existing `setActiveChatContext`) on click; empty state via `SidebarEmptyState`
+- `src/components/sidebar/channel/ChannelItem.tsx` / `ChannelList.tsx` — switch to `ChannelSummaryVO` (`id`, unread from `unreadCount`), keep identical markup and icon logic
+- `src/components/sidebar/team/TeamSection.tsx` / `TeamItem.tsx` — expanding a team also selects it (`setSelectedTeamId`); channels render only for the selected team, other teams show nothing nested. Visual structure unchanged.
+- `src/schemas/team.schema.ts`, `src/schemas/organization.schema.ts` — align with backend `common.validators.js`: introduce a shared `src/schemas/common.schema.ts` with `pageNumber`, `pageSize`, `search`, `booleanQuery` helpers and reuse them in team/channel query schemas. Fix team description max to match backend (500 vs current 1024) after re-checking `team.validators.js`.
 
-### 6. Data fetching moved out of rendering
-`useHydrateTeams(selectedOrgId)` moves from the sidebar component up to `AppLayout`, next to the existing `useHydrateMyOrganizations()` bootstrap. Teams then flow into the sidebar purely from Redux. Behaviour is identical (same hook, same skip-on-null-org semantics).
+### Selection, persistence, restoration
 
-### 7. Selectors (`src/features/selectors.ts`)
-Add small, focused selectors used by the new components (no new state, no duplication):
-`selectOrganizations`, `selectSelectedOrgId`, `selectSelectedOrganization`, `selectTeamsForSelectedOrg`, `selectSelectedTeamId`, `selectSelectedTeam`, `selectSearchQuery`, `selectActiveChatContext`, `selectChannelUnreadCount`. Memoized with `createSelector` where derived. These become the seam a later `useWorkspace()` composes over — no `workspaceSlice`, no workspace hook in this phase.
+- Persist only `selectedOrgId`, `selectedTeamId`, `selectedChannelId` (localStorage, one key each), written from the slice reducers.
+- Each hydrate hook reconciles the persisted id after data arrives: if the id is not in the loaded list, clear it (which also removes the localStorage entry) and auto-select the first item; if nothing is selected and a list exists, select the first.
+- Cascade: changing org clears team + channel; changing team clears channel.
 
-## Technical notes
+### Mock data cleanup
 
-- No changes to: `src/api/*`, mappers, DTO/VO types, slices, persistence, auth, or `mockData`.
-- Local UI state (expansion, dialog open, hover) stays in components; nothing new enters Redux.
-- All extracted JSX keeps its exact class names and structure; strict TypeScript with explicit prop interfaces on every presentation component.
-- Verification: `tsgo` typecheck plus a Playwright pass on the preview to confirm teams render, expand/collapse, search filtering, channel selection, and the create/edit dialogs behave as before.
+`ChannelSection` is the only channel consumer of `@/data/mockData`. After this phase the remaining mock imports are conversations/notifications/messages/users only (`chatSlice`, `ChatHeader`, `MessageBubble`, `ConversationList`, `ActivityFeed`, `NotificationList`, `NavRail`) — left for later phases. `ChatHeader` currently reads mock `channels`; it will be switched to read the current channel VO from selectors so no channel mock remains.
 
-## Future-readiness check
+### Technical notes
 
-Adding real Channels = swapping the data source inside `ChannelSection` only. Adding DMs = a new section built from the same primitives, mounted in `SidebarContent`. Adding `useWorkspace()` = composing the selectors in step 7; component props stay unchanged.
+- Redux stores VOs only; every API response passes through the mapper.
+- Query string building follows the existing `buildTeamsQueryString` helper style.
+- Archive/unarchive are implemented in API + use-case layers; no UI beyond create/edit per your answer.
+- Strict TypeScript, no `any`; verified with a typecheck at the end.
