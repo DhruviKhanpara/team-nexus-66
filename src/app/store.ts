@@ -6,6 +6,7 @@ import uiReducer from '@/features/uiSlice';
 import chatReducer from '@/features/chatSlice';
 import organizationReducer from '@/features/organizationSlice';
 import teamReducer from '@/features/teamSlice';
+import channelReducer from '@/features/channelSlice';
 
 export const store = configureStore({
   reducer: {
@@ -15,6 +16,7 @@ export const store = configureStore({
     chat: chatReducer,
     organization: organizationReducer,
     team: teamReducer,
+    channel: channelReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(baseApi.middleware),
