@@ -1,11 +1,12 @@
 import ChannelItem from './ChannelItem';
-import type { Channel } from '@/types';
+import type { ChannelSummaryVO } from '@/types/channel';
 
 interface ChannelListProps {
-  channels: Channel[];
+  channels: ChannelSummaryVO[];
   activeChannelId: string | null;
-  getUnreadCount: (channelId: string) => number;
+  getUnreadCount: (channel: ChannelSummaryVO) => number;
   onSelect: (channelId: string) => void;
+  onEdit: (channel: ChannelSummaryVO) => void;
 }
 
 /** Pure presentation: renders a collection of channels. */
@@ -14,15 +15,17 @@ const ChannelList = ({
   activeChannelId,
   getUnreadCount,
   onSelect,
+  onEdit,
 }: ChannelListProps) => (
   <>
     {channels.map((channel) => (
       <ChannelItem
-        key={channel._id}
+        key={channel.id}
         channel={channel}
-        isActive={activeChannelId === channel._id}
-        unreadCount={getUnreadCount(channel._id)}
+        isActive={activeChannelId === channel.id}
+        unreadCount={getUnreadCount(channel)}
         onSelect={onSelect}
+        onEdit={onEdit}
       />
     ))}
   </>
