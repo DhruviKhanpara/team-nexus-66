@@ -9,17 +9,20 @@ import { useAppDispatch } from '@/app/store';
 import { toggleMobileSidebar } from '@/features/uiSlice';
 import { useHydrateMyOrganizations } from '@/domain/organization';
 import { useHydrateTeams } from '@/domain/team';
-import { selectSelectedOrgId } from '@/features/selectors';
+import { useHydrateChannels } from '@/domain/channel';
+import { selectSelectedOrgId, selectSelectedTeamId } from '@/features/selectors';
 
 const AppLayout = () => {
   const { theme, isSidePanelOpen, activeThreadId, isMobileSidebarOpen, activeChatContext } = useAppSelector(s => s.ui);
   const dispatch = useAppDispatch();
   const selectedOrgId = useAppSelector(selectSelectedOrgId);
+  const selectedTeamId = useAppSelector(selectSelectedTeamId);
 
-  // Bootstrap the workspace: load organizations, then the selected org's teams.
+  // Bootstrap the workspace: organizations → teams → channels.
   // Data synchronization lives here, not inside the sidebar's rendering tree.
   useHydrateMyOrganizations();
   useHydrateTeams(selectedOrgId);
+  useHydrateChannels(selectedOrgId, selectedTeamId);
 
 
   useEffect(() => {
