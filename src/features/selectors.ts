@@ -2,14 +2,13 @@
  * Cross-slice selectors — the read seam between Redux and the UI.
  *
  * Components should consume these instead of reaching into slice internals.
- * A future Workspace abstraction can compose these without touching any
- * component API.
  */
 
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 import type { OrgSummaryVO } from '@/types/organization';
 import type { TeamSummaryVO } from '@/types/team';
+import type { ChannelSummaryVO } from '@/types/channel';
 
 //#region Organization
 export const selectOrganizations = (state: RootState): OrgSummaryVO[] =>
@@ -43,6 +42,65 @@ export const selectSelectedTeam = createSelector(
   [selectTeamsForSelectedOrg, selectSelectedTeamId],
   (teams, selectedTeamId): TeamSummaryVO | null =>
     teams.find((t) => t.id === selectedTeamId) ?? null,
+);
+//#endregion
+
+//#region Channel
+const EMPTY_CHANNELS: ChannelSummaryVO[] = [];
+
+const selectChannelsByTeamId = (state: RootState) =>
+  state.channel.channelsByTeamId;
+
+export const selectSelectedChannelId = (state: RootState): string | null =>
+  state.channel.selectedChannelId;
+
+export const selectChannelsForSelectedTeam = createSelector(
+  [selectChannelsByTeamId, selectSelectedTeamId],
+  (channelsByTeamId, selectedTeamId): ChannelSummaryVO[] =>
+    selectedTeamId
+      ? (channelsByTeamId[selectedTeamId] ?? EMPTY_CHANNELS)
+      : EMPTY_CHANNELS,
+);
+
+export const selectSelectedChannel = createSelector(
+  [selectChannelsForSelectedTeam, selectSelectedChannelId],
+  (channels, selectedChannelId): ChannelSummaryVO | null =>
+    channels.find((c) => c.id === selectedChannelId) ?? null,
+);
+
+/** Look up a channel by id across every loaded team. */
+export const selectChannelById = createSelector(
+  [selectChannelsByTeamId, (_state: RootState, channelId: string | null) => channelId],
+  (channelsByTeamId, channelId): ChannelSummaryVO | null => {
+    if (!channelId) return null;
+    for (const channels of Object.values(channelsByTeamId)) {
+      const match = channels.find((c) => c.id === channelId);
+      if (match) return match;
+    }
+    return null;
+  },
+);
+//#endregion
+
+//#region Workspace
+export const selectCurrentOrganization = selectSelectedOrganization;
+export const selectCurrentTeam = selectSelectedTeam;
+export const selectCurrentChannel = selectSelectedChannel;
+
+export interface WorkspaceVO {
+  organization: OrgSummaryVO | null;
+  team: TeamSummaryVO | null;
+  channel: ChannelSummaryVO | null;
+}
+
+/** The full Organization → Team → Channel context the user is working in. */
+export const selectCurrentWorkspace = createSelector(
+  [selectCurrentOrganization, selectCurrentTeam, selectCurrentChannel],
+  (organization, team, channel): WorkspaceVO => ({
+    organization,
+    team,
+    channel,
+  }),
 );
 //#endregion
 

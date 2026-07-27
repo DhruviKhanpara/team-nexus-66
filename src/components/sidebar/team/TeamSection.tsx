@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useAppSelector } from '@/app/store';
+import { useAppDispatch, useAppSelector } from '@/app/store';
+import { setSelectedTeamId } from '@/features/teamSlice';
 import {
   selectSearchQuery,
   selectSelectedOrgId,
+  selectSelectedTeamId,
   selectTeamsForSelectedOrg,
 } from '@/features/selectors';
 import { SidebarEmptyState, SidebarSection } from '@/components/sidebar/primitives';
@@ -16,23 +18,29 @@ import type { TeamSummaryVO } from '@/types/team';
 /**
  * Container for the Teams area of the sidebar.
  * Owns team-scoped UI state and dialogs — no data fetching happens here.
+ * Only the selected team renders its channels (channels are loaded per team).
  */
 const TeamSection = () => {
+  const dispatch = useAppDispatch();
   const selectedOrgId = useAppSelector(selectSelectedOrgId);
+  const selectedTeamId = useAppSelector(selectSelectedTeamId);
   const teams = useAppSelector(selectTeamsForSelectedOrg);
   const searchQuery = useAppSelector(selectSearchQuery);
 
-  const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [editTeam, setEditTeam] = useState<TeamSummaryVO | null>(null);
 
-  const toggleTeam = useCallback((teamId: string) => {
-    setExpandedTeams((prev) => ({ ...prev, [teamId]: !(prev[teamId] ?? true) }));
-  }, []);
+  // Expanding a team selects it; collapsing clears the selection.
+  const toggleTeam = useCallback(
+    (teamId: string) => {
+      dispatch(setSelectedTeamId(selectedTeamId === teamId ? null : teamId));
+    },
+    [dispatch, selectedTeamId],
+  );
 
   const isExpanded = useCallback(
-    (teamId: string) => expandedTeams[teamId] ?? true,
-    [expandedTeams],
+    (teamId: string) => selectedTeamId === teamId,
+    [selectedTeamId],
   );
 
   const filteredTeams = useMemo(
@@ -61,7 +69,11 @@ const TeamSection = () => {
             isExpanded={isExpanded}
             onToggle={toggleTeam}
             onEdit={setEditTeam}
-            renderTeamContent={(team) => <ChannelSection teamId={team.id} />}
+            renderTeamContent={(team) =>
+              team.id === selectedTeamId ? (
+                <ChannelSection teamId={team.id} />
+              ) : null
+            }
           />
         )}
       </SidebarSection>
