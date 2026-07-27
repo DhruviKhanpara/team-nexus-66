@@ -1,11 +1,15 @@
 import { useAppSelector } from '@/app/store';
-import { channels, conversations, userMap } from '@/data/mockData';
+import { conversations, userMap } from '@/data/mockData';
+import { selectChannelById } from '@/features/selectors';
 import { Hash, Megaphone, Lock, Users, Pin, Info } from 'lucide-react';
 import { useMemo } from 'react';
 
 const ChatHeader = () => {
   const { activeChatContext } = useAppSelector(s => s.ui);
   const currentUser = useAppSelector(s => s.auth.user);
+  const activeChannel = useAppSelector(s =>
+    selectChannelById(s, activeChatContext?.type === 'channel' ? activeChatContext.id : null),
+  );
 
   const headerData = useMemo(() => {
     if (!activeChatContext) return null;
@@ -16,12 +20,16 @@ const ChatHeader = () => {
     let memberCount = 0;
 
     if (activeChatContext.type === 'channel') {
-      const channel = channels.find(c => c._id === activeChatContext.id);
-      if (channel) {
-        name = channel.name;
-        description = channel.description || '';
-        memberCount = channel.memberCount;
-        const IconComp = channel.type === 'announcement' ? Megaphone : channel.isPrivate ? Lock : Hash;
+      if (activeChannel) {
+        name = activeChannel.name;
+        description = activeChannel.description || '';
+        memberCount = activeChannel.memberCount;
+        const IconComp =
+          activeChannel.type === 'announcement'
+            ? Megaphone
+            : activeChannel.isPrivate
+              ? Lock
+              : Hash;
         icon = <IconComp className="w-5 h-5 text-muted-foreground" />;
       }
     } else {
