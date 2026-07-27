@@ -48,7 +48,7 @@ const ChatHeader = () => {
     }
 
     return { name, description, icon, memberCount };
-  }, [activeChatContext, currentUser?.id]);
+  }, [activeChatContext, activeChannel, currentUser?.id]);
 
   if (!headerData) return null;
 
