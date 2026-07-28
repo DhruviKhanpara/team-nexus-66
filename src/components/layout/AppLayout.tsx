@@ -10,13 +10,15 @@ import { toggleMobileSidebar } from '@/features/uiSlice';
 import { useHydrateMyOrganizations } from '@/domain/organization';
 import { useHydrateTeams } from '@/domain/team';
 import { useHydrateChannels } from '@/domain/channel';
-import { selectSelectedOrgId, selectSelectedTeamId } from '@/features/selectors';
+import { setActiveChatContext } from '@/features/uiSlice';
+import { selectSelectedChannelId, selectSelectedOrgId, selectSelectedTeamId } from '@/features/selectors';
 
 const AppLayout = () => {
   const { theme, isSidePanelOpen, activeThreadId, isMobileSidebarOpen, activeChatContext } = useAppSelector(s => s.ui);
   const dispatch = useAppDispatch();
   const selectedOrgId = useAppSelector(selectSelectedOrgId);
   const selectedTeamId = useAppSelector(selectSelectedTeamId);
+  const selectedChannelId = useAppSelector(selectSelectedChannelId);
 
   // Bootstrap the workspace: organizations → teams → channels.
   // Data synchronization lives here, not inside the sidebar's rendering tree.
@@ -24,6 +26,13 @@ const AppLayout = () => {
   useHydrateTeams(selectedOrgId);
   useHydrateChannels(selectedOrgId, selectedTeamId);
 
+
+  // Follow the auto-selected channel so the chat surface opens on it.
+  useEffect(() => {
+    if (selectedChannelId && !activeChatContext) {
+      dispatch(setActiveChatContext({ type: 'channel', id: selectedChannelId }));
+    }
+  }, [selectedChannelId, activeChatContext, dispatch]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
