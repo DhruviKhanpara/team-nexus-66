@@ -9,6 +9,7 @@ import type { RootState } from '@/app/store';
 import type { OrgSummaryVO } from '@/types/organization';
 import type { TeamSummaryVO } from '@/types/team';
 import type { ChannelSummaryVO } from '@/types/channel';
+import type { MessagePaginationVO, MessageVO } from '@/types/message';
 
 //#region Organization
 export const selectOrganizations = (state: RootState): OrgSummaryVO[] =>
@@ -120,4 +121,68 @@ export const selectChannelUnreadCount = (
   channelId: string,
 ): number =>
   state.chat.readStates.find((r) => r.channelId === channelId)?.unreadCount ?? 0;
+//#endregion
+
+//#region Messages
+const EMPTY_MESSAGES: MessageVO[] = [];
+
+const EMPTY_PAGINATION: MessagePaginationVO = {
+  hasMore: false,
+  nextCursor: null,
+};
+
+const selectMessagesByChannelId = (state: RootState) =>
+  state.message.byChannelId;
+
+const selectChannelIdArg = (
+  _state: RootState,
+  channelId: string | null,
+): string | null => channelId;
+
+/** Messages for an explicit channel, ordered oldest → newest. */
+export const selectMessagesForChannel = createSelector(
+  [selectMessagesByChannelId, selectChannelIdArg],
+  (byChannelId, channelId): MessageVO[] => {
+    const bucket = channelId ? byChannelId[channelId] : undefined;
+    if (!bucket) return EMPTY_MESSAGES;
+    return bucket.ids.map((id) => bucket.entities[id]).filter(Boolean);
+  },
+);
+
+/** Messages for the currently selected channel, ordered oldest → newest. */
+export const selectMessagesForCurrentChannel = createSelector(
+  [selectMessagesByChannelId, selectSelectedChannelId],
+  (byChannelId, channelId): MessageVO[] => {
+    const bucket = channelId ? byChannelId[channelId] : undefined;
+    if (!bucket) return EMPTY_MESSAGES;
+    return bucket.ids.map((id) => bucket.entities[id]).filter(Boolean);
+  },
+);
+
+export const selectMessagesLoading = (state: RootState): boolean => {
+  const channelId = state.channel.selectedChannelId;
+  const bucket = channelId ? state.message.byChannelId[channelId] : undefined;
+  return bucket?.isInitialLoading ?? false;
+};
+
+export const selectMessagesLoadingMore = (state: RootState): boolean => {
+  const channelId = state.channel.selectedChannelId;
+  const bucket = channelId ? state.message.byChannelId[channelId] : undefined;
+  return bucket?.isLoadingMore ?? false;
+};
+
+export const selectMessagesInitialized = (state: RootState): boolean => {
+  const channelId = state.channel.selectedChannelId;
+  const bucket = channelId ? state.message.byChannelId[channelId] : undefined;
+  return bucket?.initialized ?? false;
+};
+
+export const selectMessagePagination = createSelector(
+  [selectMessagesByChannelId, selectChannelIdArg],
+  (byChannelId, channelId): MessagePaginationVO => {
+    const bucket = channelId ? byChannelId[channelId] : undefined;
+    if (!bucket) return EMPTY_PAGINATION;
+    return { hasMore: bucket.hasMore, nextCursor: bucket.nextCursor };
+  },
+);
 //#endregion

@@ -16,7 +16,7 @@ const savedTheme = (typeof window !== 'undefined' && localStorage.getItem('theme
 
 const initialState: UiState = {
   activeNav: 'teams',
-  activeChatContext: { type: 'channel', id: 'ch1' },
+  activeChatContext: null,
   activeThreadId: null,
   isSidePanelOpen: true,
   isMobileSidebarOpen: false,

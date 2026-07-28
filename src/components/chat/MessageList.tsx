@@ -1,29 +1,57 @@
 /**
- * MessageList — renders messages grouped by date.
+ * MessageList — renders backend channel messages grouped by date.
  *
- * Uses domain/chat/chat.logic for grouping and avatar logic.
+ * Data comes from the message slice via focused selectors.
  */
 
 import { useRef, useEffect, useMemo } from 'react';
 import { useAppSelector } from '@/app/store';
 import MessageBubble from './MessageBubble';
 import { shouldShowAvatar, groupMessagesByDate } from '@/domain/chat';
+import {
+  selectMessagesForCurrentChannel,
+  selectMessagesInitialized,
+  selectMessagesLoading,
+  selectMessagesLoadingMore,
+  selectSelectedChannelId,
+} from '@/features/selectors';
 
-const MessageList = () => {
-  const { activeChatContext } = useAppSelector(s => s.ui);
-  const { messages } = useAppSelector(s => s.chat);
+interface MessageListProps {
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+}
+
+const MessageList = ({ hasMore = false, onLoadMore }: MessageListProps) => {
+  const channelId = useAppSelector(selectSelectedChannelId);
+  const messages = useAppSelector(selectMessagesForCurrentChannel);
+  const isLoading = useAppSelector(selectMessagesLoading);
+  const isLoadingMore = useAppSelector(selectMessagesLoadingMore);
+  const initialized = useAppSelector(selectMessagesInitialized);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const contextId = activeChatContext?.id || '';
-  const contextMessages = messages[contextId] || [];
-
-  const grouped = useMemo(() => groupMessagesByDate(contextMessages), [contextMessages]);
+  const grouped = useMemo(() => groupMessagesByDate(messages), [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [contextMessages.length, contextId]);
+  }, [messages.length, channelId]);
 
-  if (contextMessages.length === 0) {
+  if (!channelId) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground text-sm">Select a channel to start chatting.</p>
+      </div>
+    );
+  }
+
+  if (isLoading && messages.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground text-sm">Loading messages…</p>
+      </div>
+    );
+  }
+
+  if (initialized && messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <p className="text-muted-foreground text-sm">No messages yet. Start the conversation!</p>
@@ -33,6 +61,18 @@ const MessageList = () => {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4">
+      {hasMore && (
+        <div className="flex justify-center pb-2">
+          <button
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            className="text-xs text-primary hover:underline disabled:opacity-50"
+          >
+            {isLoadingMore ? 'Loading…' : 'Load earlier messages'}
+          </button>
+        </div>
+      )}
+
       {grouped.map(group => (
         <div key={group.date}>
           {/* Date separator */}
@@ -53,7 +93,7 @@ const MessageList = () => {
 
             return (
               <MessageBubble
-                key={msg._id}
+                key={msg.id}
                 message={msg}
                 showAvatar={showAv}
               />

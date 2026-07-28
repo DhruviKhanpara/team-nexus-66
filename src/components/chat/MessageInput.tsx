@@ -1,12 +1,18 @@
 /**
  * MessageInput — chat text input with formatting toolbar.
  *
- * Uses usePersistMessage use case hook.
+ * Sends through the message domain use case (backend-driven).
  */
 
 import { useState, useRef, useCallback } from 'react';
 import { Send, Paperclip, SmilePlus, AtSign, Bold, Italic, Code } from 'lucide-react';
-import { usePersistMessage } from '@/domain/chat';
+import { useAppSelector } from '@/app/store';
+import { usePersistSendMessage } from '@/domain/message';
+import {
+  selectSelectedChannelId,
+  selectSelectedOrgId,
+  selectSelectedTeamId,
+} from '@/features/selectors';
 
 interface MessageInputProps {
   threadId?: string;
@@ -16,10 +22,22 @@ interface MessageInputProps {
 const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { sendMessage } = usePersistMessage();
+  const orgId = useAppSelector(selectSelectedOrgId);
+  const teamId = useAppSelector(selectSelectedTeamId);
+  const channelId = useAppSelector(selectSelectedChannelId);
+  const { sendMessage, isSending } = usePersistSendMessage();
 
-  const handleSend = useCallback(() => {
-    const success = sendMessage(content, threadId);
+  const handleSend = useCallback(async () => {
+    if (!orgId || !teamId || !channelId) return;
+    if (!content.trim() || isSending) return;
+
+    const success = await sendMessage({
+      orgId,
+      teamId,
+      channelId,
+      content,
+      threadRootMessageId: threadId ?? null,
+    });
 
     if (success) {
       setContent('');
@@ -28,7 +46,7 @@ const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
         textareaRef.current.style.height = 'auto';
       }
     }
-  }, [content, threadId, sendMessage, onSend]);
+  }, [orgId, teamId, channelId, content, isSending, sendMessage, threadId, onSend]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -82,7 +100,7 @@ const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
             </button>
             <button
               onClick={handleSend}
-              disabled={!content.trim()}
+              disabled={!content.trim() || isSending}
               className="p-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Send className="w-4 h-4" />

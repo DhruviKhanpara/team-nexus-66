@@ -104,7 +104,11 @@ const baseQueryWithRefresh: BaseQueryFn<
     const envelope = result.data as ApiResponse;
 
     // Show success toast for mutations only, when backend provides a message
-    if (api.type === "mutation" && envelope.statusMessage?.trim()) {
+    const silentSuccess =
+      (extraOptions as { silentSuccess?: boolean } | undefined)?.silentSuccess ===
+      true;
+
+    if (!silentSuccess && api.type === "mutation" && envelope.statusMessage?.trim()) {
       toast.success(envelope.statusMessage);
     }
 
