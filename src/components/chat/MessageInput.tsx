@@ -100,7 +100,7 @@ const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
             </button>
             <button
               onClick={handleSend}
-              disabled={!content.trim()}
+              disabled={!content.trim() || isSending}
               className="p-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Send className="w-4 h-4" />
