@@ -5,7 +5,7 @@
  * used by UI components. No API calls, no Redux.
  */
 
-import type { Message, Reaction, DateGroup } from '@/types/chat';
+import type { Reaction } from '@/types/chat';
 
 // ── Message Grouping ───────────────────────────────────────────────────
 
@@ -28,11 +28,19 @@ export const shouldShowAvatar = (
   );
 };
 
+export interface DateGroupOf<T> {
+  date: string;
+  messages: T[];
+}
+
 /**
  * Group a flat list of messages by date for display.
+ * Generic so it works with any object carrying a `createdAt` timestamp.
  */
-export const groupMessagesByDate = (messages: Message[]): DateGroup[] => {
-  const grouped: DateGroup[] = [];
+export const groupMessagesByDate = <T extends { createdAt: string }>(
+  messages: T[],
+): DateGroupOf<T>[] => {
+  const grouped: DateGroupOf<T>[] = [];
 
   messages.forEach((msg) => {
     const date = new Date(msg.createdAt).toLocaleDateString('en-US', {
