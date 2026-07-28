@@ -1,19 +1,19 @@
 /**
- * MessageBubble — renders a single message with reactions, threads, and actions.
+ * MessageBubble — renders a single backend message (MessageVO).
  *
- * Uses domain/chat use case hooks for interactions.
+ * Presentation only: reactions, editing, deleting and threads are wired in
+ * later phases; the affordances remain so the visual layout is unchanged.
  */
 
-import { memo, useState, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useAppSelector } from '@/app/store';
-import { userMap } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MessageSquare, SmilePlus, MoreHorizontal, Pencil, Trash2, Pin } from 'lucide-react';
 import { format } from 'date-fns';
-import type { Message } from '@/types';
+import type { MessageVO } from '@/types/message';
 import { QUICK_EMOJIS } from '@/lib/constants';
 import { getInitials } from '@/lib/helpers';
-import { usePersistReaction, usePersistDeleteMessage, useThread } from '@/domain/chat';
+import { useThread } from '@/domain/chat';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,42 +22,33 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 interface MessageBubbleProps {
-  message: Message;
+  message: MessageVO;
   showAvatar: boolean;
   isThread?: boolean;
 }
 
 const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProps) => {
-  const { activeChatContext } = useAppSelector(s => s.ui);
   const currentUser = useAppSelector(s => s.auth.user);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  const { toggleMessageReaction } = usePersistReaction();
-  const { deleteMessage } = usePersistDeleteMessage();
   const { openThread } = useThread();
 
-  const sender = userMap[message.senderId];
   const isOwn = message.senderId === currentUser?.id;
-  const contextId = activeChatContext?.id || '';
 
-  const handleReaction = useCallback((emoji: string) => {
-    toggleMessageReaction(contextId, message._id, emoji);
+  const handleReaction = useCallback(() => {
+    // Reactions are implemented in a later phase.
     setShowEmojiPicker(false);
-  }, [contextId, message._id, toggleMessageReaction]);
-
-  const handleDelete = useCallback(() => {
-    deleteMessage(contextId, message._id);
-  }, [contextId, message._id, deleteMessage]);
-
-  const handleOpenThread = useCallback(() => {
-    openThread(message._id);
-  }, [message._id, openThread]);
+  }, []);
 
   const toggleEmojiPicker = useCallback(() => {
     setShowEmojiPicker(prev => !prev);
   }, []);
 
-  if (message.deletedAt) {
+  const handleOpenThread = useCallback(() => {
+    openThread(message.id);
+  }, [message.id, openThread]);
+
+  if (message.isDeleted) {
     return (
       <div className={`py-1 ${showAvatar ? 'mt-3' : ''}`}>
         <p className="text-xs text-muted-foreground italic pl-12">This message was deleted.</p>
@@ -72,7 +63,7 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
           {showAvatar && (
             <Avatar className="w-8 h-8">
               <AvatarFallback className="text-xs font-semibold bg-secondary text-secondary-foreground">
-                {getInitials(sender?.name)}
+                {getInitials(message.senderName)}
               </AvatarFallback>
             </Avatar>
           )}
@@ -82,7 +73,7 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
           {showAvatar && (
             <div className="flex items-baseline gap-2 mb-0.5">
               <span className="text-sm font-semibold text-foreground">
-                {sender?.name || 'Unknown'}
+                {message.senderName || 'Unknown'}
               </span>
               <span className="text-[11px] text-muted-foreground">
                 {format(new Date(message.createdAt), 'h:mm a')}
@@ -102,9 +93,9 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
               {message.reactions.map(reaction => (
                 <button
                   key={reaction.emoji}
-                  onClick={() => handleReaction(reaction.emoji)}
+                  onClick={handleReaction}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors ${
-                    currentUser && reaction.users.includes(currentUser.id)
+                    reaction.reactedByMe
                       ? 'bg-primary/10 border-primary/30 text-primary'
                       : 'bg-muted border-border text-muted-foreground hover:bg-accent'
                   }`}
@@ -140,7 +131,7 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
                 {QUICK_EMOJIS.map(emoji => (
                   <button
                     key={emoji}
-                    onClick={() => handleReaction(emoji)}
+                    onClick={handleReaction}
                     className="w-8 h-8 flex items-center justify-center rounded hover:bg-accent text-base transition-colors"
                   >
                     {emoji}
@@ -174,7 +165,7 @@ const MessageBubble = memo(({ message, showAvatar, isThread }: MessageBubbleProp
                   <DropdownMenuItem className="gap-2 text-xs">
                     <Pencil className="w-3.5 h-3.5" /> Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDelete} className="gap-2 text-xs text-destructive">
+                  <DropdownMenuItem className="gap-2 text-xs text-destructive">
                     <Trash2 className="w-3.5 h-3.5" /> Delete
                   </DropdownMenuItem>
                 </>
