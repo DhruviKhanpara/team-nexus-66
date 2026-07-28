@@ -1,7 +1,8 @@
 /**
  * ThreadPanel — thread view with parent message + replies.
  *
- * Uses useThread use case hook.
+ * Thread replies are fetched in a later phase; the parent message is read
+ * from the channel message store.
  */
 
 import { useAppSelector } from '@/app/store';
@@ -9,17 +10,18 @@ import { useThread } from '@/domain/chat';
 import { X } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
+import { selectMessagesForCurrentChannel } from '@/features/selectors';
+import type { MessageVO } from '@/types/message';
 
 const ThreadPanel = () => {
-  const { activeThreadId, activeChatContext } = useAppSelector(s => s.ui);
-  const { messages, threadMessages: threadMsgs } = useAppSelector(s => s.chat);
+  const activeThreadId = useAppSelector(s => s.ui.activeThreadId);
+  const messages = useAppSelector(selectMessagesForCurrentChannel);
   const { closeThread } = useThread();
 
-  if (!activeThreadId || !activeChatContext) return null;
+  if (!activeThreadId) return null;
 
-  const contextMessages = messages[activeChatContext.id] || [];
-  const parentMessage = contextMessages.find(m => m._id === activeThreadId);
-  const replies = threadMsgs[activeThreadId] || [];
+  const parentMessage = messages.find(m => m.id === activeThreadId);
+  const replies: MessageVO[] = [];
 
   if (!parentMessage) return null;
 
@@ -51,7 +53,7 @@ const ThreadPanel = () => {
         {replies.map((msg, i) => {
           const prevMsg = i > 0 ? replies[i - 1] : null;
           const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId;
-          return <MessageBubble key={msg._id} message={msg} showAvatar={showAvatar} isThread />;
+          return <MessageBubble key={msg.id} message={msg} showAvatar={showAvatar} isThread />;
         })}
       </div>
 
