@@ -9,6 +9,7 @@ import type { RootState } from '@/app/store';
 import type { OrgSummaryVO } from '@/types/organization';
 import type { TeamSummaryVO } from '@/types/team';
 import type { ChannelSummaryVO } from '@/types/channel';
+import type { MessagePaginationVO, MessageVO } from '@/types/message';
 
 //#region Organization
 export const selectOrganizations = (state: RootState): OrgSummaryVO[] =>
