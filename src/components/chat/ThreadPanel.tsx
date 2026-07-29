@@ -10,12 +10,12 @@ import { useThread } from '@/domain/chat';
 import { X } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
-import { selectMessagesForCurrentChannel } from '@/features/selectors';
+import { selectMessagesForActiveScope } from '@/features/selectors';
 import type { MessageVO } from '@/types/message';
 
 const ThreadPanel = () => {
   const activeThreadId = useAppSelector(s => s.ui.activeThreadId);
-  const messages = useAppSelector(selectMessagesForCurrentChannel);
+  const messages = useAppSelector(selectMessagesForActiveScope);
   const { closeThread } = useThread();
 
   if (!activeThreadId) return null;

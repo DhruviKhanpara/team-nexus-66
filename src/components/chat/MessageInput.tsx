@@ -6,13 +6,8 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Send, Paperclip, SmilePlus, AtSign, Bold, Italic, Code } from 'lucide-react';
-import { useAppSelector } from '@/app/store';
 import { usePersistSendMessage } from '@/domain/message';
-import {
-  selectSelectedChannelId,
-  selectSelectedOrgId,
-  selectSelectedTeamId,
-} from '@/features/selectors';
+import { useActiveChatTarget } from '@/hooks/useActiveChatTarget';
 
 interface MessageInputProps {
   threadId?: string;
@@ -22,19 +17,15 @@ interface MessageInputProps {
 const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const orgId = useAppSelector(selectSelectedOrgId);
-  const teamId = useAppSelector(selectSelectedTeamId);
-  const channelId = useAppSelector(selectSelectedChannelId);
+  const target = useActiveChatTarget();
   const { sendMessage, isSending } = usePersistSendMessage();
 
   const handleSend = useCallback(async () => {
-    if (!orgId || !teamId || !channelId) return;
+    if (!target) return;
     if (!content.trim() || isSending) return;
 
     const success = await sendMessage({
-      orgId,
-      teamId,
-      channelId,
+      target,
       content,
       threadRootMessageId: threadId ?? null,
     });
@@ -46,7 +37,7 @@ const MessageInput = ({ threadId, onSend }: MessageInputProps) => {
         textareaRef.current.style.height = 'auto';
       }
     }
-  }, [orgId, teamId, channelId, content, isSending, sendMessage, threadId, onSend]);
+  }, [target, content, isSending, sendMessage, threadId, onSend]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

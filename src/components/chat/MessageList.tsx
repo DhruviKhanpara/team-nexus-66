@@ -9,11 +9,11 @@ import { useAppSelector } from '@/app/store';
 import MessageBubble from './MessageBubble';
 import { shouldShowAvatar, groupMessagesByDate } from '@/domain/chat';
 import {
-  selectMessagesForCurrentChannel,
+  selectMessagesForActiveScope,
+  selectActiveScopeKey,
   selectMessagesInitialized,
   selectMessagesLoading,
   selectMessagesLoadingMore,
-  selectSelectedChannelId,
 } from '@/features/selectors';
 
 interface MessageListProps {
@@ -22,8 +22,8 @@ interface MessageListProps {
 }
 
 const MessageList = ({ hasMore = false, onLoadMore }: MessageListProps) => {
-  const channelId = useAppSelector(selectSelectedChannelId);
-  const messages = useAppSelector(selectMessagesForCurrentChannel);
+  const scopeKey = useAppSelector(selectActiveScopeKey);
+  const messages = useAppSelector(selectMessagesForActiveScope);
   const isLoading = useAppSelector(selectMessagesLoading);
   const isLoadingMore = useAppSelector(selectMessagesLoadingMore);
   const initialized = useAppSelector(selectMessagesInitialized);
@@ -33,12 +33,12 @@ const MessageList = ({ hasMore = false, onLoadMore }: MessageListProps) => {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, channelId]);
+  }, [messages.length, scopeKey]);
 
-  if (!channelId) {
+  if (!scopeKey) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <p className="text-muted-foreground text-sm">Select a channel to start chatting.</p>
+        <p className="text-muted-foreground text-sm">Select a channel or conversation to start chatting.</p>
       </div>
     );
   }
