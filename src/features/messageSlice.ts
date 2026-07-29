@@ -1,15 +1,17 @@
 /**
  * Message Redux slice — STATE ONLY.
  *
- * Normalised, per-channel, pagination-first state so that future
- * socket events map to a single `upsertMessage` dispatch.
+ * Normalised, per-scope, pagination-first state. A "scope" is either a
+ * channel (`channel:<id>`) or a conversation (`conversation:<id>`), so both
+ * messaging domains share one implementation. Future socket events map to a
+ * single `upsertMessage` dispatch.
  */
 
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { clearAuth } from "@/features/authSlice";
 import type { MessageVO } from "@/types/message";
 
-export interface ChannelMessagesState {
+export interface ScopeMessagesState {
   /** Ascending (oldest → newest) render order. */
   ids: string[];
   entities: Record<string, MessageVO>;
@@ -20,11 +22,14 @@ export interface ChannelMessagesState {
   initialized: boolean;
 }
 
+/** @deprecated Use {@link ScopeMessagesState}. Kept as an alias. */
+export type ChannelMessagesState = ScopeMessagesState;
+
 interface MessageState {
-  byChannelId: Record<string, ChannelMessagesState>;
+  byScopeKey: Record<string, ScopeMessagesState>;
 }
 
-export const emptyChannelMessages = (): ChannelMessagesState => ({
+export const emptyScopeMessages = (): ScopeMessagesState => ({
   ids: [],
   entities: {},
   nextCursor: null,
@@ -35,21 +40,21 @@ export const emptyChannelMessages = (): ChannelMessagesState => ({
 });
 
 const initialState: MessageState = {
-  byChannelId: {},
+  byScopeKey: {},
 };
 
-const ensureChannel = (
+const ensureScope = (
   state: MessageState,
-  channelId: string,
-): ChannelMessagesState => {
-  if (!state.byChannelId[channelId]) {
-    state.byChannelId[channelId] = emptyChannelMessages();
+  scopeKey: string,
+): ScopeMessagesState => {
+  if (!state.byScopeKey[scopeKey]) {
+    state.byScopeKey[scopeKey] = emptyScopeMessages();
   }
-  return state.byChannelId[channelId];
+  return state.byScopeKey[scopeKey];
 };
 
 /** Insert a message keeping `ids` sorted ascending by createdAt. */
-const insertAscending = (bucket: ChannelMessagesState, message: MessageVO) => {
+const insertAscending = (bucket: ScopeMessagesState, message: MessageVO) => {
   const existing = bucket.entities[message.id];
   bucket.entities[message.id] = message;
   if (existing) return;
@@ -68,20 +73,20 @@ const messageSlice = createSlice({
   name: "message",
   initialState,
   reducers: {
-    /** Replace the first page for a channel. `messages` arrive newest → oldest. */
+    /** Replace the first page for a scope. `messages` arrive newest → oldest. */
     setInitialMessages: (
       state,
       action: PayloadAction<{
-        channelId: string;
+        scopeKey: string;
         messages: MessageVO[];
         hasMore: boolean;
         nextCursor: string | null;
       }>,
     ) => {
-      const { channelId, messages, hasMore, nextCursor } = action.payload;
+      const { scopeKey, messages, hasMore, nextCursor } = action.payload;
       const ascending = [...messages].reverse();
 
-      state.byChannelId[channelId] = {
+      state.byScopeKey[scopeKey] = {
         ids: ascending.map((m) => m.id),
         entities: Object.fromEntries(ascending.map((m) => [m.id, m])),
         nextCursor,
@@ -96,14 +101,14 @@ const messageSlice = createSlice({
     prependOlderMessages: (
       state,
       action: PayloadAction<{
-        channelId: string;
+        scopeKey: string;
         messages: MessageVO[];
         hasMore: boolean;
         nextCursor: string | null;
       }>,
     ) => {
-      const { channelId, messages, hasMore, nextCursor } = action.payload;
-      const bucket = ensureChannel(state, channelId);
+      const { scopeKey, messages, hasMore, nextCursor } = action.payload;
+      const bucket = ensureScope(state, scopeKey);
       const ascending = [...messages].reverse();
       const fresh = ascending.filter((m) => !bucket.entities[m.id]);
 
@@ -120,29 +125,29 @@ const messageSlice = createSlice({
     /** Insert or replace a single message (send response, future socket event). */
     upsertMessage: (
       state,
-      action: PayloadAction<{ channelId: string; message: MessageVO }>,
+      action: PayloadAction<{ scopeKey: string; message: MessageVO }>,
     ) => {
-      const { channelId, message } = action.payload;
-      insertAscending(ensureChannel(state, channelId), message);
+      const { scopeKey, message } = action.payload;
+      insertAscending(ensureScope(state, scopeKey), message);
     },
 
     setMessagesLoading: (
       state,
       action: PayloadAction<{
-        channelId: string;
+        scopeKey: string;
         isInitialLoading?: boolean;
         isLoadingMore?: boolean;
       }>,
     ) => {
-      const { channelId, isInitialLoading, isLoadingMore } = action.payload;
-      const bucket = ensureChannel(state, channelId);
+      const { scopeKey, isInitialLoading, isLoadingMore } = action.payload;
+      const bucket = ensureScope(state, scopeKey);
       if (isInitialLoading !== undefined)
         bucket.isInitialLoading = isInitialLoading;
       if (isLoadingMore !== undefined) bucket.isLoadingMore = isLoadingMore;
     },
 
-    clearChannelMessages: (state, action: PayloadAction<string>) => {
-      delete state.byChannelId[action.payload];
+    clearScopeMessages: (state, action: PayloadAction<string>) => {
+      delete state.byScopeKey[action.payload];
     },
   },
   extraReducers: (builder) => {
@@ -155,7 +160,7 @@ export const {
   prependOlderMessages,
   upsertMessage,
   setMessagesLoading,
-  clearChannelMessages,
+  clearScopeMessages,
 } = messageSlice.actions;
 
 export default messageSlice.reducer;
