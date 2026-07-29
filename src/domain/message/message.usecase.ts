@@ -1,8 +1,11 @@
 /**
  * Message use case hooks — service layer.
  *
- * useHydrateChannelMessages → fetch + store the first page
- * useLoadMoreChannelMessages → cursor pagination (older pages)
+ * Target-aware: one implementation serves both channel messages and
+ * conversation (DM / group) messages via the `ChatTarget` union.
+ *
+ * useHydrateMessages   → fetch + store the first page
+ * useLoadMoreMessages  → cursor pagination (older pages)
  * usePersistSendMessage → send a message and store the response
  */
 
@@ -10,8 +13,11 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/store";
 import {
   useGetChannelMessagesQuery,
+  useGetConversationMessagesQuery,
   useLazyGetChannelMessagesQuery,
+  useLazyGetConversationMessagesQuery,
   useSendChannelMessageMutation,
+  useSendConversationMessageMutation,
 } from "@/api/messageApi";
 import { mapMessageDtoToVO, mapMessageListDtoToVO } from "./message.mapper";
 import {
@@ -22,6 +28,8 @@ import {
 } from "@/features/messageSlice";
 import { selectMessagePagination } from "@/features/selectors";
 import { sendMessageSchema } from "@/schemas/message.schema";
+import { toScopeKey, type ChatTarget } from "@/types/chatTarget";
+import type { MessageListDTO } from "@/types/message";
 
 export const MESSAGES_PAGE_SIZE = 50;
 
@@ -32,27 +40,49 @@ const createClientMessageId = (): string => {
   return `cmid_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 };
 
-/**
- * Load the first page of messages for a channel.
- * Skips until the full Organization → Team → Channel context exists.
- */
-const useHydrateChannelMessages = (
-  orgId: string | null,
-  teamId: string | null,
-  channelId: string | null,
-) => {
-  const dispatch = useAppDispatch();
-  const skip = !orgId || !teamId || !channelId;
+const isChannelTarget = (
+  target: ChatTarget | null,
+): target is Extract<ChatTarget, { kind: "channel" }> =>
+  target?.kind === "channel";
 
-  const { data, isLoading, isFetching } = useGetChannelMessagesQuery(
+const isConversationTarget = (
+  target: ChatTarget | null,
+): target is Extract<ChatTarget, { kind: "conversation" }> =>
+  target?.kind === "conversation";
+
+/**
+ * Load the first page of messages for the given chat target.
+ * Skips until a complete target exists.
+ */
+const useHydrateMessages = (target: ChatTarget | null) => {
+  const dispatch = useAppDispatch();
+  const scopeKey = toScopeKey(target);
+
+  const channelTarget = isChannelTarget(target) ? target : null;
+  const conversationTarget = isConversationTarget(target) ? target : null;
+
+  const channelResult = useGetChannelMessagesQuery(
     {
-      orgId: orgId as string,
-      teamId: teamId as string,
-      channelId: channelId as string,
+      orgId: channelTarget?.orgId as string,
+      teamId: channelTarget?.teamId as string,
+      channelId: channelTarget?.channelId as string,
       query: { pageSize: MESSAGES_PAGE_SIZE },
     },
-    { skip },
+    { skip: !channelTarget },
   );
+
+  const conversationResult = useGetConversationMessagesQuery(
+    {
+      conversationId: conversationTarget?.conversationId as string,
+      query: { pageSize: MESSAGES_PAGE_SIZE },
+    },
+    { skip: !conversationTarget },
+  );
+
+  const active = channelTarget ? channelResult : conversationResult;
+  const data = channelTarget
+    ? (channelResult.data as MessageListDTO | undefined)
+    : (conversationResult.data as MessageListDTO | undefined);
 
   const list = useMemo(
     () => (data ? mapMessageListDtoToVO(data) : null),
@@ -61,100 +91,115 @@ const useHydrateChannelMessages = (
 
   // Reflect in-flight state so the UI can render a loading state.
   useEffect(() => {
-    if (!channelId || skip) return;
+    if (!scopeKey) return;
     dispatch(
       setMessagesLoading({
-        channelId,
-        isInitialLoading: isLoading || isFetching,
+        scopeKey,
+        isInitialLoading: active.isLoading || active.isFetching,
       }),
     );
-  }, [channelId, skip, isLoading, isFetching, dispatch]);
+  }, [scopeKey, active.isLoading, active.isFetching, dispatch]);
 
   useEffect(() => {
-    if (!channelId || !list) return;
+    if (!scopeKey || !list) return;
     dispatch(
       setInitialMessages({
-        channelId,
+        scopeKey,
         messages: list.data,
         hasMore: list.hasMore,
         nextCursor: list.nextCursor,
       }),
     );
-  }, [channelId, list, dispatch]);
+  }, [scopeKey, list, dispatch]);
 
-  return { isLoading, isFetching };
+  return { isLoading: active.isLoading, isFetching: active.isFetching };
 };
 
 /**
  * Fetch the next (older) page using the backend cursor.
  * Ready for infinite scrolling — the caller only needs to invoke `loadMore`.
  */
-const useLoadMoreChannelMessages = (
-  orgId: string | null,
-  teamId: string | null,
-  channelId: string | null,
-) => {
+const useLoadMoreMessages = (target: ChatTarget | null) => {
   const dispatch = useAppDispatch();
-  const [trigger] = useLazyGetChannelMessagesQuery();
-  const pagination = useAppSelector((s) =>
-    selectMessagePagination(s, channelId),
-  );
+  const [triggerChannel] = useLazyGetChannelMessagesQuery();
+  const [triggerConversation] = useLazyGetConversationMessagesQuery();
+  const scopeKey = toScopeKey(target);
+  const pagination = useAppSelector((s) => selectMessagePagination(s, scopeKey));
   const inFlight = useRef(false);
 
   const loadMore = useCallback(async () => {
-    if (!orgId || !teamId || !channelId) return;
+    if (!target || !scopeKey) return;
     if (!pagination.hasMore || !pagination.nextCursor) return;
     if (inFlight.current) return;
 
     inFlight.current = true;
-    dispatch(setMessagesLoading({ channelId, isLoadingMore: true }));
+    dispatch(setMessagesLoading({ scopeKey, isLoadingMore: true }));
 
     try {
-      const dto = await trigger({
-        orgId,
-        teamId,
-        channelId,
-        query: {
-          pageSize: MESSAGES_PAGE_SIZE,
-          beforeId: pagination.nextCursor,
-        },
-      }).unwrap();
+      const query = {
+        pageSize: MESSAGES_PAGE_SIZE,
+        beforeId: pagination.nextCursor,
+      };
+
+      const dto =
+        target.kind === "channel"
+          ? await triggerChannel({
+              orgId: target.orgId,
+              teamId: target.teamId,
+              channelId: target.channelId,
+              query,
+            }).unwrap()
+          : await triggerConversation({
+              conversationId: target.conversationId,
+              query,
+            }).unwrap();
 
       const list = mapMessageListDtoToVO(dto);
       dispatch(
         prependOlderMessages({
-          channelId,
+          scopeKey,
           messages: list.data,
           hasMore: list.hasMore,
           nextCursor: list.nextCursor,
         }),
       );
     } catch {
-      dispatch(setMessagesLoading({ channelId, isLoadingMore: false }));
+      dispatch(setMessagesLoading({ scopeKey, isLoadingMore: false }));
     } finally {
       inFlight.current = false;
     }
-  }, [orgId, teamId, channelId, pagination, trigger, dispatch]);
+  }, [
+    target,
+    scopeKey,
+    pagination,
+    triggerChannel,
+    triggerConversation,
+    dispatch,
+  ]);
 
   return { loadMore, hasMore: pagination.hasMore };
 };
 
 /**
- * Send a channel message. Validates with the backend-mirroring Zod schema,
- * then stores the mapped response VO.
+ * Send a message to a channel or a conversation. Validates with the
+ * backend-mirroring Zod schema, then stores the mapped response VO.
  */
 const usePersistSendMessage = () => {
   const dispatch = useAppDispatch();
-  const [sendMutation, { isLoading }] = useSendChannelMessageMutation();
+  const [sendChannel, { isLoading: isSendingChannel }] =
+    useSendChannelMessageMutation();
+  const [sendConversation, { isLoading: isSendingConversation }] =
+    useSendConversationMessageMutation();
 
   const sendMessage = useCallback(
     async (args: {
-      orgId: string;
-      teamId: string;
-      channelId: string;
+      target: ChatTarget;
       content: string;
       threadRootMessageId?: string | null;
     }): Promise<boolean> => {
+      const scopeKey = toScopeKey(args.target);
+      if (!scopeKey) return false;
+
       const parsed = sendMessageSchema.safeParse({
         content: args.content,
         fileIds: [],
@@ -164,26 +209,31 @@ const usePersistSendMessage = () => {
 
       if (!parsed.success) return false;
 
+      const body = {
+        clientMessageId: createClientMessageId(),
+        content: parsed.data.content ?? null,
+        fileIds: parsed.data.fileIds,
+        mentionedUserIds: parsed.data.mentionedUserIds,
+        threadRootMessageId: parsed.data.threadRootMessageId ?? null,
+      };
+
       try {
-        const dto = await sendMutation({
-          orgId: args.orgId,
-          teamId: args.teamId,
-          channelId: args.channelId,
-          body: {
-            clientMessageId: createClientMessageId(),
-            content: parsed.data.content ?? null,
-            fileIds: parsed.data.fileIds,
-            mentionedUserIds: parsed.data.mentionedUserIds,
-            threadRootMessageId: parsed.data.threadRootMessageId ?? null,
-          },
-        }).unwrap();
+        const dto =
+          args.target.kind === "channel"
+            ? await sendChannel({
+                orgId: args.target.orgId,
+                teamId: args.target.teamId,
+                channelId: args.target.channelId,
+                body,
+              }).unwrap()
+            : await sendConversation({
+                conversationId: args.target.conversationId,
+                body,
+              }).unwrap();
 
         if (dto) {
           dispatch(
-            upsertMessage({
-              channelId: args.channelId,
-              message: mapMessageDtoToVO(dto),
-            }),
+            upsertMessage({ scopeKey, message: mapMessageDtoToVO(dto) }),
           );
         }
         return true;
@@ -192,14 +242,13 @@ const usePersistSendMessage = () => {
         return false;
       }
     },
-    [sendMutation, dispatch],
+    [sendChannel, sendConversation, dispatch],
   );
 
-  return { sendMessage, isSending: isLoading };
+  return {
+    sendMessage,
+    isSending: isSendingChannel || isSendingConversation,
+  };
 };
 
-export {
-  useHydrateChannelMessages,
-  useLoadMoreChannelMessages,
-  usePersistSendMessage,
-};
+export { useHydrateMessages, useLoadMoreMessages, usePersistSendMessage };

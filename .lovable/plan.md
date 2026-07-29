@@ -1,75 +1,46 @@
-# Phase 4 — Channel Messaging
+## Phase 5 — Conversation Domain (updated for server-9)
 
-## What the backend actually exposes (verified in server-7.zip)
+Verified from `server-9.zip`:
 
-Routes are mounted at `/orgs/:orgId/teams/:teamId/channels/:channelId/messages`:
+**Conversations** (top-level, no org scope) — `GET /conversations` (offset paginated), `GET /conversations/direct?userId=`, `GET /conversations/:id`, `GET /conversations/:id/participants`, `POST /conversations/direct`, `POST /conversations/group`, `PUT /conversations/:id`, `PUT|DELETE /conversations/:id/logo`, `POST /conversations/:id/participants`, `PUT /conversations/:id/participants/:participantId/role`, `DELETE /conversations/:id/participants/me`, `DELETE /conversations/:id/participants/:participantId`. Types: `direct` | `group`; group create needs `name` (1–150) + ≥2 other participant ids.
 
-- `GET /` — query `pageSize` (default 50, max 100), `beforeId` (cursor), `threadRootMessageId`. Returns `{ data, hasMore, nextCursor }` with messages sorted newest-first (`_id: -1`).
-- `POST /` — body `{ clientMessageId (required, non-empty), content (<=10000, optional/nullable), fileIds[], mentionedUserIds[], threadRootMessageId }`; requires content OR at least one file. Returns the created message DTO. Backend is idempotent on `clientMessageId`.
+**Conversation messages** — mounted at `/conversations/:conversationId/messages`: `GET /` (cursor: `pageSize`, `beforeId`, `threadRootMessageId` → `{data, hasMore, nextCursor}`), `POST /` (`clientMessageId`, `content`, `fileIds`, `mentionedUserIds`, `threadRootMessageId` → `MessageDTO`), `DELETE /:messageId`, `DELETE /:messageId/force`, `POST /:messageId/pin`, `POST /:messageId/reactions`. Identical `toMessageDTO` shape as channel messages, so the existing `MessageDTO`/`MessageVO` and mapper are reused unchanged. No edit endpoint exists; if needed it will mirror as `PUT /conversations/:id/messages/:messageId` with the `editChannelMessage` body — but edit is out of phase scope, so it will not be built.
 
-Other routes exist (edit/delete/pin/react) but are explicitly out of scope for this phase.
+### 1. Types — `src/types/conversation.ts`
+DTOs exactly as the service returns: `ConversationSummaryDTO` / `ConversationDetailDTO` (`id`, `type`, `name`, `logo`, `participantCount`, `createdAt`, `lastMessageAt`, `unreadCount`, `mentionCount`, `role`, `joinedAt`, `peer{userId,name,username,icon}`), `ConversationsListDTO = PaginatedDTO<…>`, `ConversationParticipantDTO`, `DirectLookupDTO`, and create/update DTOs. VOs add derived display fields (`isDirect`, `isGroup`, `displayName`, `avatarUrl`, `initials`, `peerUserId`) so components never branch on raw backend fields.
 
-Message DTO (from `utils/mappers.util.js`): `id, channelId, conversationId, senderId, senderName, senderIcon, threadId, content, isSystem, isEdited, editedAt, replyCount, lastReplyAt, dmStatus, dmDeliveredAt, dmSeenAt, attachments[], mentions[], reactions[{emoji,count,reactedByMe,previewNames}], isDeleted, createdAt, updatedAt`.
+### 2. API
+- `src/api/conversationApi.ts` — every conversation route above; new `TAGS.CONVERSATIONS` (LIST + per-id) with `TAGS.MEMBERS` for participants; mutations invalidate correctly.
+- `src/api/messageApi.ts` — add `getConversationMessages`, `sendConversationMessage`, `deleteConversationMessage`, `toggleConversationMessageReaction`, `pinConversationMessage` alongside the channel endpoints, reusing the existing query-string builder and `silentSuccess` on send.
 
-Note — backend defect found: `channelMessage.service.js` calls `getCursorPaginatedResponse(data, hasMore, nextCursor)` positionally, but the util destructures a single object. As written, the list endpoint returns `{ data: undefined, hasMore: undefined, nextCursor: undefined }`. Fix on the server is one line (`getCursorPaginatedResponse({ data, hasMore, nextCursor })`). The frontend mapper will also tolerate a missing/mis-shaped envelope so the UI degrades to an empty list rather than crashing.
+### 3. Mapper / schema / use cases
+- `src/domain/conversation/conversation.mapper.ts` — DTO → VO only.
+- `src/schemas/conversation.schema.ts` — Zod mirroring backend validators.
+- `src/domain/conversation/conversation.usecase.ts` — `useHydrateConversations`, `useHydrateConversation`, `useHydrateConversationParticipants`, `useSelectConversation`, `usePersistCreateDirectConversation`, `usePersistCreateGroupConversation`, `usePersistUpdateGroupConversation`, `usePersistAddParticipant`, `usePersistUpdateParticipantRole`, `usePersistRemoveParticipant`, `usePersistLeaveConversation` — same `try/catch` + `isLoading`/`isSuccess` contract as channel hooks.
+- `src/domain/message/message.usecase.ts` — hydrate/load-more/send hooks become target-aware (channel vs conversation) rather than duplicated.
 
-## Files to add (matching existing Organization/Team/Channel conventions)
+### 4. Redux
+- `src/features/conversationSlice.ts` — `conversations: ConversationVO[]`, `selectedConversationId`, `isLoading`. Persists **only** `selectedConversationId`; resets on `clearAuth`; hydration validates the restored id against the loaded list and clears it when invalid. No auto-select, so Chat opens on the "select a conversation" state.
+- `src/features/messageSlice.ts` — re-key buckets from `byChannelId` to `byScopeKey` with a `channel:<id>` / `conversation:<id>` key helper. Reducers keep identical semantics (`setInitialMessages`, `prependOlderMessages`, `upsertMessage`, …), so a future socket event lands in one dispatch for either domain.
 
-The project uses `src/api/xApi.ts`, `src/types/x.ts`, `src/domain/x/x.mapper.ts`, `x.usecase.ts`, `src/features/xSlice.ts`, `src/schemas/x.schema.ts`, shared selectors in `src/features/selectors.ts`. Message module mirrors that exactly:
+### 5. Navigation mode — `src/features/uiSlice.ts`
+Add `activeNavigationMode: 'workspace' | 'conversation'`, set from nav-rail (`teams` → workspace, `chat` → conversation). Conversation selection dispatches no org/team/channel actions, so workspace selection is preserved and restored when switching back.
 
-- `src/types/message.ts` — DTOs (`MessageDTO`, `MessageAttachmentDTO`, `MessageReactionDTO`, `MessageListDTO`, `SendMessageDTO`, `GetMessagesQueryDTO`) and VOs (`MessageVO`, `MessageListVO`, `MessagePaginationVO`).
-- `src/api/messageApi.ts` — `getChannelMessages` query + `sendChannelMessage` mutation, new `TAGS.MESSAGES` usage, cursor query-string builder.
-- `src/domain/message/message.mapper.ts` — DTO → VO only.
-- `src/domain/message/message.usecase.ts` — `useHydrateChannelMessages`, `useLoadMoreChannelMessages`, `usePersistSendMessage`.
-- `src/domain/message/index.ts` — barrel.
-- `src/features/messageSlice.ts` — pagination-shaped state.
-- `src/schemas/message.schema.ts` — Zod mirror of the backend send validator (trim, max 10000, content-or-files rule).
-- Selectors added to `src/features/selectors.ts`.
+### 6. Sidebar
+New `src/components/sidebar/conversation/`: `ConversationSection` (hydration + dialogs), `ConversationList`, `ConversationItem`, `ConversationActions`, `CreateConversationButton` — built on existing `SidebarSection`/`SidebarItem`/`SidebarEmptyState` primitives, visually matching today's list (avatar/initials, name, last-activity time, unread badge). The mock `src/components/sidebar/ConversationList.tsx` is deleted and `SidePanel` renders the new section for `activeNav === 'chat'`. Mock-only presence dots disappear with the mock data.
 
-## State shape (pagination-first, socket-ready)
+Dialogs (per your answer): `CreateDirectConversationDialog` (lookup via `GET /conversations/direct`, then `POST /direct`, then select) and `CreateGroupConversationDialog` (name + participant multi-select), using existing `src/components/forms/` fields.
 
-```text
-messageSlice = {
-  byChannelId: {
-    [channelId]: {
-      ids: string[],              // ascending (oldest → newest) render order
-      entities: Record<id, MessageVO>,
-      nextCursor: string | null,
-      hasMore: boolean,
-      isInitialLoading: boolean,
-      isLoadingMore: boolean,
-      initialized: boolean,
-    }
-  }
-}
-```
+### 7. Shared chat surface
+`ChatView`, `ChatHeader`, `MessageList`, `MessageBubble`, `MessageInput` remain single implementations. A new `useActiveChatTarget()` returns a discriminated target (`{kind:'channel', orgId, teamId, channelId}` | `{kind:'conversation', conversationId}`); components read messages via scope-key selectors and send via the target-aware hook. `ChatHeader` shows conversation name/avatar/participant count from the VO. No `ConversationMessage*` components.
 
-Normalised per-channel entities mean a future socket `message:new` / `message:updated` event is a single `upsertMessage` reducer with no restructuring — that is the check the phase asks for. Reducers: `setInitialMessages`, `prependOlderMessages`, `upsertMessage`, `setLoading`, `clearChannelMessages`. Slice resets on `clearAuth`, and clears the channel entry when `setSelectedChannelId` changes (same cascade pattern as `channelSlice`).
+### 8. Selectors & cleanup
+`selectConversations`, `selectSelectedConversationId`, `selectSelectedConversation`, `selectConversationsLoading`, plus scope-aware message selectors replacing the channel-only ones. Remove conversation/user/status mock usage from `ChatHeader` and the sidebar; activity/notification mocks stay for their own phases.
 
-## Data flow
+### Technical notes
+- Strict TypeScript, no `any`; DTOs never enter Redux.
+- Backend quirk: `updateParticipantRoleSchema` uses `GROUP_ROLES` without importing it — that route will throw server-side until fixed; client hook still built to contract.
+- Out of scope as specified: sockets, presence, typing, notifications, reactions UI, edit/delete UI, threads, new attachment support.
 
-`AppLayout` already hydrates org → team → channel. Add `useHydrateChannelMessages(orgId, teamId, selectedChannelId)` in `ChatView` (keeps it scoped to the chat surface and unmounts cleanly). It skips until all three ids exist, maps the DTO envelope, reverses to ascending order, and dispatches `setInitialMessages`.
-
-Pagination: `useLoadMoreChannelMessages` issues the same endpoint with `beforeId = nextCursor` via a lazy query and dispatches `prependOlderMessages`. No infinite-scroll UI is added now, but `MessageList` will expose the hook's `loadMore`/`hasMore` so scroll-up wiring is a later 5-line change.
-
-Send: `usePersistSendMessage` validates with the Zod schema, generates `clientMessageId` via `crypto.randomUUID()`, awaits the mutation, maps the returned DTO, dispatches `upsertMessage`. No optimistic insert (per scope).
-
-## Selectors (in `selectors.ts`)
-
-`selectMessagesForCurrentChannel()`, `selectMessagesLoading()`, `selectMessagesLoadingMore()`, `selectMessagePagination()`, `selectMessagesInitialized()` — all memoized, keyed off the existing `selectSelectedChannelId`.
-
-## Existing UI — reuse, not replace
-
-- `MessageList.tsx`: swap `state.chat.messages[contextId]` for `selectMessagesForCurrentChannel`; keep the existing date-grouping, avatar-grouping, scroll-to-bottom and markup untouched. Add loading and empty states using the existing text-centred empty block / `SidebarEmptyState` styling.
-- `MessageBubble.tsx`: keep the exact markup. Change its prop type to `MessageVO` and read `senderName`/`senderIcon` from the message instead of `userMap` mock lookup (removes the last mock dependency in the chat surface). Reaction/thread/delete affordances stay visually identical; their handlers remain the current local-Redux ones since those features are out of scope this phase.
-- `MessageInput.tsx`: keep the toolbar and textarea as-is; route `handleSend` through `usePersistSendMessage`, disable while sending, clear on success only.
-- `ChatView`/`ChatHeader`: unchanged apart from hydration hook wiring.
-- `uiSlice` initial `activeChatContext: { type:'channel', id:'ch1' }` (mock id) is replaced with `null`, and channel selection in the sidebar sets the chat context — otherwise the app boots pointing at a channel that no longer exists.
-
-## Cleanup
-
-Remove channel-message mock seeding from `chatSlice` (`channelMessages`, `threadMessages` for channels) while leaving conversation mocks intact for the later DM phase. `src/data/mockData.ts` stays for conversations/notifications.
-
-## Verification
-
-TypeScript strict build + lint clean; visual diff of the chat pane unchanged; channel switch clears and reloads correctly.
+### Acceptance
+Backend-driven conversation list, persistent and self-healing selection, untouched/restored workspace selection across modes, conversation messages loading and sending through the reused chat components, no mock conversations, unchanged visuals, clean strict build.

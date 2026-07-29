@@ -10,6 +10,9 @@ import type { OrgSummaryVO } from '@/types/organization';
 import type { TeamSummaryVO } from '@/types/team';
 import type { ChannelSummaryVO } from '@/types/channel';
 import type { MessagePaginationVO, MessageVO } from '@/types/message';
+import type { ConversationVO } from '@/types/conversation';
+import { channelScopeKey, conversationScopeKey } from '@/types/chatTarget';
+
 
 //#region Organization
 export const selectOrganizations = (state: RootState): OrgSummaryVO[] =>
@@ -123,7 +126,48 @@ export const selectChannelUnreadCount = (
   state.chat.readStates.find((r) => r.channelId === channelId)?.unreadCount ?? 0;
 //#endregion
 
-//#region Messages
+//#region Conversations
+const EMPTY_CONVERSATIONS: ConversationVO[] = [];
+
+export const selectConversations = (state: RootState): ConversationVO[] =>
+  state.conversation.conversations ?? EMPTY_CONVERSATIONS;
+
+export const selectSelectedConversationId = (
+  state: RootState,
+): string | null => state.conversation.selectedConversationId;
+
+export const selectConversationsLoading = (state: RootState): boolean =>
+  state.conversation.isLoading;
+
+export const selectSelectedConversation = createSelector(
+  [selectConversations, selectSelectedConversationId],
+  (conversations, selectedId): ConversationVO | null =>
+    conversations.find((c) => c.id === selectedId) ?? null,
+);
+
+export const selectConversationById = createSelector(
+  [
+    selectConversations,
+    (_state: RootState, conversationId: string | null) => conversationId,
+  ],
+  (conversations, conversationId): ConversationVO | null =>
+    conversationId
+      ? (conversations.find((c) => c.id === conversationId) ?? null)
+      : null,
+);
+
+export const selectDirectConversations = createSelector(
+  [selectConversations],
+  (conversations) => conversations.filter((c) => c.isDirect),
+);
+
+export const selectGroupConversations = createSelector(
+  [selectConversations],
+  (conversations) => conversations.filter((c) => c.isGroup),
+);
+//#endregion
+
+//#region Messages (scope-keyed: channel:<id> | conversation:<id>)
 const EMPTY_MESSAGES: MessageVO[] = [];
 
 const EMPTY_PAGINATION: MessagePaginationVO = {
@@ -131,56 +175,60 @@ const EMPTY_PAGINATION: MessagePaginationVO = {
   nextCursor: null,
 };
 
-const selectMessagesByChannelId = (state: RootState) =>
-  state.message.byChannelId;
+const selectMessagesByScopeKey = (state: RootState) => state.message.byScopeKey;
 
-const selectChannelIdArg = (
+const selectScopeKeyArg = (
   _state: RootState,
-  channelId: string | null,
-): string | null => channelId;
+  scopeKey: string | null,
+): string | null => scopeKey;
 
-/** Messages for an explicit channel, ordered oldest → newest. */
-export const selectMessagesForChannel = createSelector(
-  [selectMessagesByChannelId, selectChannelIdArg],
-  (byChannelId, channelId): MessageVO[] => {
-    const bucket = channelId ? byChannelId[channelId] : undefined;
+/** The scope key of the currently open chat surface, if any. */
+export const selectActiveScopeKey = (state: RootState): string | null => {
+  const context = state.ui.activeChatContext;
+  if (!context) return null;
+  return context.type === 'channel'
+    ? channelScopeKey(context.id)
+    : conversationScopeKey(context.id);
+};
+
+/** Messages for an explicit scope, ordered oldest → newest. */
+export const selectMessagesForScope = createSelector(
+  [selectMessagesByScopeKey, selectScopeKeyArg],
+  (byScopeKey, scopeKey): MessageVO[] => {
+    const bucket = scopeKey ? byScopeKey[scopeKey] : undefined;
     if (!bucket) return EMPTY_MESSAGES;
-    return bucket.ids.map((id) => bucket.entities[id]).filter(Boolean);
+    return bucket.ids.map((id: string) => bucket.entities[id]).filter(Boolean);
   },
 );
 
-/** Messages for the currently selected channel, ordered oldest → newest. */
-export const selectMessagesForCurrentChannel = createSelector(
-  [selectMessagesByChannelId, selectSelectedChannelId],
-  (byChannelId, channelId): MessageVO[] => {
-    const bucket = channelId ? byChannelId[channelId] : undefined;
+/** Messages for the currently open chat surface, ordered oldest → newest. */
+export const selectMessagesForActiveScope = createSelector(
+  [selectMessagesByScopeKey, selectActiveScopeKey],
+  (byScopeKey, scopeKey): MessageVO[] => {
+    const bucket = scopeKey ? byScopeKey[scopeKey] : undefined;
     if (!bucket) return EMPTY_MESSAGES;
-    return bucket.ids.map((id) => bucket.entities[id]).filter(Boolean);
+    return bucket.ids.map((id: string) => bucket.entities[id]).filter(Boolean);
   },
 );
 
-export const selectMessagesLoading = (state: RootState): boolean => {
-  const channelId = state.channel.selectedChannelId;
-  const bucket = channelId ? state.message.byChannelId[channelId] : undefined;
-  return bucket?.isInitialLoading ?? false;
+const activeBucket = (state: RootState) => {
+  const scopeKey = selectActiveScopeKey(state);
+  return scopeKey ? state.message.byScopeKey[scopeKey] : undefined;
 };
 
-export const selectMessagesLoadingMore = (state: RootState): boolean => {
-  const channelId = state.channel.selectedChannelId;
-  const bucket = channelId ? state.message.byChannelId[channelId] : undefined;
-  return bucket?.isLoadingMore ?? false;
-};
+export const selectMessagesLoading = (state: RootState): boolean =>
+  activeBucket(state)?.isInitialLoading ?? false;
 
-export const selectMessagesInitialized = (state: RootState): boolean => {
-  const channelId = state.channel.selectedChannelId;
-  const bucket = channelId ? state.message.byChannelId[channelId] : undefined;
-  return bucket?.initialized ?? false;
-};
+export const selectMessagesLoadingMore = (state: RootState): boolean =>
+  activeBucket(state)?.isLoadingMore ?? false;
+
+export const selectMessagesInitialized = (state: RootState): boolean =>
+  activeBucket(state)?.initialized ?? false;
 
 export const selectMessagePagination = createSelector(
-  [selectMessagesByChannelId, selectChannelIdArg],
-  (byChannelId, channelId): MessagePaginationVO => {
-    const bucket = channelId ? byChannelId[channelId] : undefined;
+  [selectMessagesByScopeKey, selectScopeKeyArg],
+  (byScopeKey, scopeKey): MessagePaginationVO => {
+    const bucket = scopeKey ? byScopeKey[scopeKey] : undefined;
     if (!bucket) return EMPTY_PAGINATION;
     return { hasMore: bucket.hasMore, nextCursor: bucket.nextCursor };
   },

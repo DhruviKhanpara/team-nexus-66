@@ -6,15 +6,8 @@
 
 import { useAppSelector } from '@/app/store';
 import { usePersistMarkAsRead } from '@/domain/chat';
-import {
-  useHydrateChannelMessages,
-  useLoadMoreChannelMessages,
-} from '@/domain/message';
-import {
-  selectSelectedChannelId,
-  selectSelectedOrgId,
-  selectSelectedTeamId,
-} from '@/features/selectors';
+import { useHydrateMessages, useLoadMoreMessages } from '@/domain/message';
+import { useActiveChatTarget } from '@/hooks/useActiveChatTarget';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -22,14 +15,12 @@ import { useEffect } from 'react';
 
 const ChatView = () => {
   const { activeChatContext } = useAppSelector(s => s.ui);
-  const orgId = useAppSelector(selectSelectedOrgId);
-  const teamId = useAppSelector(selectSelectedTeamId);
-  const channelId = useAppSelector(selectSelectedChannelId);
   const { markAsRead } = usePersistMarkAsRead();
 
-  // Organization → Team → Channel → messages.
-  useHydrateChannelMessages(orgId, teamId, channelId);
-  const { loadMore, hasMore } = useLoadMoreChannelMessages(orgId, teamId, channelId);
+  // Channel or conversation — one hydration path for both.
+  const target = useActiveChatTarget();
+  useHydrateMessages(target);
+  const { loadMore, hasMore } = useLoadMoreMessages(target);
 
   useEffect(() => {
     if (activeChatContext) {
