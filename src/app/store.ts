@@ -8,6 +8,7 @@ import organizationReducer from '@/features/organizationSlice';
 import teamReducer from '@/features/teamSlice';
 import channelReducer from '@/features/channelSlice';
 import messageReducer from '@/features/messageSlice';
+import conversationReducer from '@/features/conversationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -19,6 +20,7 @@ export const store = configureStore({
     team: teamReducer,
     channel: channelReducer,
     message: messageReducer,
+    conversation: conversationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(baseApi.middleware),
