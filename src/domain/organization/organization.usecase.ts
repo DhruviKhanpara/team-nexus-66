@@ -7,12 +7,14 @@ import { useAppDispatch, useAppSelector } from "@/app/store";
 import {
   useGetMyOrganizationsQuery,
   useGetOrganizationQuery,
+  useGetOrganizationMembersQuery,
   useCreateOrganizationMutation,
   useUpdateOrganizationMutation,
 } from "@/api/organizationApi";
 import {
   mapOrgSummaryDtoToVO,
   mapOrgDetailDtoToVO,
+  mapOrgMembersListDtoToVO,
 } from "./organization.mapper";
 import {
   setOrganizations,
@@ -66,6 +68,31 @@ const useHydrateOrganization = (orgId: string | null) => {
   );
 
   return { organization, isLoading, isFetching };
+};
+
+/** Members of an organization — used by people pickers (DMs, groups). */
+const useHydrateOrganizationMembers = (
+  orgId: string | null,
+  options?: { search?: string; pageSize?: number },
+) => {
+  const { data, isLoading, isFetching } = useGetOrganizationMembersQuery(
+    {
+      orgId: orgId as string,
+      query: {
+        search: options?.search,
+        pageSize: options?.pageSize ?? 100,
+        pageNumber: 1,
+      },
+    },
+    { skip: !orgId },
+  );
+
+  const members = useMemo(
+    () => mapOrgMembersListDtoToVO(data).data,
+    [data],
+  );
+
+  return { members, isLoading, isFetching };
 };
 
 const useSelectOrganization = () => {
@@ -122,6 +149,7 @@ const usePersistUpdateOrganization = () => {
 export {
   useHydrateMyOrganizations,
   useHydrateOrganization,
+  useHydrateOrganizationMembers,
   useSelectOrganization,
   usePersistCreateOrganization,
   usePersistUpdateOrganization,

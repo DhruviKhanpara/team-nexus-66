@@ -10,7 +10,20 @@ import type {
   CreateOrgDTO,
   CreateOrgResultDTO,
   UpdateOrgDTO,
+  OrgMembersListDTO,
+  GetOrgMembersQueryDTO,
 } from "@/types/organization";
+
+const buildQueryString = (query: Record<string, unknown> = {}): string => {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+};
 
 export const organizationApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
@@ -23,6 +36,17 @@ export const organizationApi = baseApi.injectEndpoints({
       query: (orgId) => `/orgs/${orgId}`,
       providesTags: (_res, _err, orgId) => [
         { type: TAGS.ORGANIZATIONS, id: orgId },
+      ],
+    }),
+
+    getOrganizationMembers: build.query<
+      OrgMembersListDTO,
+      { orgId: string; query?: GetOrgMembersQueryDTO }
+    >({
+      query: ({ orgId, query }) =>
+        `/orgs/${orgId}/members${buildQueryString({ ...(query ?? {}) })}`,
+      providesTags: (_res, _err, { orgId }) => [
+        { type: TAGS.MEMBERS, id: orgId },
       ],
     }),
 
@@ -51,6 +75,7 @@ export const organizationApi = baseApi.injectEndpoints({
 export const {
   useGetMyOrganizationsQuery,
   useGetOrganizationQuery,
+  useGetOrganizationMembersQuery,
   useCreateOrganizationMutation,
   useUpdateOrganizationMutation,
 } = organizationApi;
