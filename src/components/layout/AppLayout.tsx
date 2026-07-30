@@ -10,6 +10,7 @@ import { toggleMobileSidebar } from '@/features/uiSlice';
 import { useHydrateMyOrganizations } from '@/domain/organization';
 import { useHydrateTeams } from '@/domain/team';
 import { useHydrateChannels } from '@/domain/channel';
+import { useHydrateConversations } from '@/domain/conversation';
 import { setActiveChatContext } from '@/features/uiSlice';
 import { selectSelectedChannelId, selectSelectedOrgId, selectSelectedTeamId } from '@/features/selectors';
 
@@ -25,6 +26,8 @@ const AppLayout = () => {
   useHydrateMyOrganizations();
   useHydrateTeams(selectedOrgId);
   useHydrateChannels(selectedOrgId, selectedTeamId);
+  // Conversations are user-scoped (independent of the workspace hierarchy).
+  useHydrateConversations();
 
 
   // Follow the auto-selected channel so the chat surface opens on it.

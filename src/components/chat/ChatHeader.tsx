@@ -1,14 +1,19 @@
 import { useAppSelector } from '@/app/store';
-import { conversations, userMap } from '@/data/mockData';
-import { selectChannelById } from '@/features/selectors';
+import { selectChannelById, selectConversationById } from '@/features/selectors';
 import { Hash, Megaphone, Lock, Users, Pin, Info } from 'lucide-react';
 import { useMemo } from 'react';
+import type { RootState } from '@/app/store';
 
 const ChatHeader = () => {
   const { activeChatContext } = useAppSelector(s => s.ui);
-  const currentUser = useAppSelector(s => s.auth.user);
   const activeChannel = useAppSelector(s =>
     selectChannelById(s, activeChatContext?.type === 'channel' ? activeChatContext.id : null),
+  );
+  const activeConversation = useAppSelector((s: RootState) =>
+    selectConversationById(
+      s,
+      activeChatContext?.type === 'conversation' ? activeChatContext.id : null,
+    ),
   );
 
   const headerData = useMemo(() => {
@@ -32,23 +37,16 @@ const ChatHeader = () => {
               : Hash;
         icon = <IconComp className="w-5 h-5 text-muted-foreground" />;
       }
-    } else {
-      const conv = conversations.find(c => c._id === activeChatContext.id);
-      if (conv) {
-        if (conv.type === 'group') {
-          name = conv.name || 'Group Chat';
-          memberCount = conv.participants.length;
-          icon = <Users className="w-5 h-5 text-muted-foreground" />;
-        } else {
-          const other = conv.participants.find(p => p.userId !== currentUser?.id);
-          const otherUser = other ? userMap[other.userId] : null;
-          name = otherUser?.name || 'Unknown';
-        }
+    } else if (activeConversation) {
+      name = activeConversation.displayName;
+      if (activeConversation.isGroup) {
+        memberCount = activeConversation.participantCount;
+        icon = <Users className="w-5 h-5 text-muted-foreground" />;
       }
     }
 
     return { name, description, icon, memberCount };
-  }, [activeChatContext, activeChannel, currentUser?.id]);
+  }, [activeChatContext, activeChannel, activeConversation]);
 
   if (!headerData) return null;
 

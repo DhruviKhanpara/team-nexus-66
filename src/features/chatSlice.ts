@@ -16,7 +16,6 @@
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { Message, ReadState } from '@/types';
-import { conversationMessages, readStates } from '@/data/mockData';
 
 interface ChatState {
   messages: Record<string, Message[]>;
@@ -25,12 +24,11 @@ interface ChatState {
   typingUsers: Record<string, string[]>;
 }
 
-// Channel messages are backend-driven (messageSlice). Only conversation
-// mocks remain until the Conversations phase replaces them.
+// Channel and conversation messages are backend-driven (messageSlice).
 const initialState: ChatState = {
-  messages: { ...conversationMessages },
+  messages: {},
   threadMessages: {},
-  readStates,
+  readStates: [],
   typingUsers: {},
 };
 

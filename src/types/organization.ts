@@ -9,6 +9,8 @@
  * (mock channels, chat) still import them from `@/types`.
  */
 
+import type { PaginatedDTO, PaginatedVO } from "./team";
+
 //#region Data Transfer Objects
 export interface OrgSummaryDTO {
   id: string;
@@ -40,7 +42,27 @@ export interface CreateOrgResultDTO {
 export interface UpdateOrgDTO {
   name: string;
 }
+
+export interface OrgMemberDTO {
+  membershipId: string;
+  userId: string;
+  name: string | null;
+  username: string | null;
+  iconUrl: string | null;
+  role: string;
+  joinedAt: string;
+}
+
+export type OrgMembersListDTO = PaginatedDTO<OrgMemberDTO>;
+
+export interface GetOrgMembersQueryDTO {
+  search?: string;
+  role?: string;
+  pageNumber?: number;
+  pageSize?: number;
+}
 //#endregion
+
 
 //#region Value Objects
 export interface OrgSummaryVO {
@@ -60,6 +82,19 @@ export interface OrgDetailVO {
   iconUrl: string | null;
   createdAt: string;
 }
+
+export interface OrgMemberVO {
+  membershipId: string;
+  userId: string;
+  name: string;
+  username: string;
+  iconUrl: string | null;
+  initials: string;
+  role: string;
+  joinedAt: string;
+}
+
+export type OrgMembersListVO = PaginatedVO<OrgMemberVO>;
 //#endregion
 
 //#region Legacy types kept for channels / chat mock data
