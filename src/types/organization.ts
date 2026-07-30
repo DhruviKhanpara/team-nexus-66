@@ -82,6 +82,19 @@ export interface OrgDetailVO {
   iconUrl: string | null;
   createdAt: string;
 }
+
+export interface OrgMemberVO {
+  membershipId: string;
+  userId: string;
+  name: string;
+  username: string;
+  iconUrl: string | null;
+  initials: string;
+  role: string;
+  joinedAt: string;
+}
+
+export type OrgMembersListVO = PaginatedVO<OrgMemberVO>;
 //#endregion
 
 //#region Legacy types kept for channels / chat mock data
