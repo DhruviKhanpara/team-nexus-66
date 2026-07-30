@@ -9,6 +9,8 @@
  * (mock channels, chat) still import them from `@/types`.
  */
 
+import type { PaginatedDTO, PaginatedVO } from "./team";
+
 //#region Data Transfer Objects
 export interface OrgSummaryDTO {
   id: string;
