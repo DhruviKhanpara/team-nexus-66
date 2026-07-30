@@ -40,7 +40,27 @@ export interface CreateOrgResultDTO {
 export interface UpdateOrgDTO {
   name: string;
 }
+
+export interface OrgMemberDTO {
+  membershipId: string;
+  userId: string;
+  name: string | null;
+  username: string | null;
+  iconUrl: string | null;
+  role: string;
+  joinedAt: string;
+}
+
+export type OrgMembersListDTO = PaginatedDTO<OrgMemberDTO>;
+
+export interface GetOrgMembersQueryDTO {
+  search?: string;
+  role?: string;
+  pageNumber?: number;
+  pageSize?: number;
+}
 //#endregion
+
 
 //#region Value Objects
 export interface OrgSummaryVO {
